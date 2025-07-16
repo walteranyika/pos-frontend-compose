@@ -9,9 +9,11 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import com.chui.pos.dtos.CartItem
 import com.chui.pos.dtos.CreateSaleRequest
+import com.chui.pos.dtos.CategoryResponse
 import com.chui.pos.dtos.PaymentRequest
 import com.chui.pos.dtos.ProductResponse
 import com.chui.pos.dtos.SaleItemRequest
+import com.chui.pos.services.CategoryService
 import com.chui.pos.services.ProductService
 import com.chui.pos.services.SaleService
 import kotlinx.coroutines.Job
@@ -19,11 +21,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 sealed interface ProductsUiState {
     object Loading : ProductsUiState
-    data class Success(val products: List<ProductResponse>) : ProductsUiState
+    data class Success(val products: List<ProductResponse>, val categories: List<CategoryResponse>) : ProductsUiState
     data class Error(val message: String) : ProductsUiState
 }
 
@@ -42,7 +46,8 @@ sealed interface PosUiState{
 }
 
 class PosViewModel(private val productService: ProductService,
-    private val saleService: SaleService
+    private val saleService: SaleService,
+    private val categoryService: CategoryService
 ) : ScreenModel {
 
     private val _uiState = mutableStateOf<PosUiState>(PosUiState.Loading)
@@ -72,9 +77,11 @@ class PosViewModel(private val productService: ProductService,
         private set
     private var searchJob: Job? = null
 
+    var selectedCategoryId by mutableStateOf<Int?>(null)
+        private set
 
     init {
-        fetchProducts()
+        fetchProductsAndCategories()
     }
 
     fun onOpenPaymentDialog(){
@@ -86,12 +93,47 @@ class PosViewModel(private val productService: ProductService,
     }
 
 
-    private fun fetchProducts() {
+    private fun fetchProductsAndCategories() {
         productsState = ProductsUiState.Loading
         screenModelScope.launch {
-            productService.getProducts()
-                .onSuccess { products -> productsState = ProductsUiState.Success(products) }
-                .onFailure { error -> productsState = ProductsUiState.Error(error.message ?: "Failed to load products") }
+            coroutineScope {
+                val productsDeferred = async { productService.getProducts() }
+                val categoriesDeferred = async { categoryService.getCategories() }
+
+                val products = productsDeferred.await().getOrElse {
+                    productsState = ProductsUiState.Error("Failed to load products: ${it.message}")
+                    return@coroutineScope
+                }
+                val categories = categoriesDeferred.await().getOrElse {
+                    productsState = ProductsUiState.Error("Failed to load categories: ${it.message}")
+                    return@coroutineScope
+                }
+
+                productsState = ProductsUiState.Success(products, categories)
+            }
+        }
+    }
+
+    fun onCategorySelected(categoryId: Int?) {
+        val currentState = productsState
+        if (currentState !is ProductsUiState.Success) return
+
+        selectedCategoryId = categoryId
+
+        // To provide immediate feedback, we could show a loading overlay on the grid.
+        // For now, let's just update the list by fetching new products.
+        screenModelScope.launch {
+            val productsResult = if (categoryId == null) {
+                productService.getProducts()
+            } else {
+                productService.getProductsByCategory(categoryId)
+            }
+
+            productsResult.onSuccess { filteredProducts ->
+                productsState = currentState.copy(products = filteredProducts)
+            }.onFailure { error ->
+                println("Error filtering products: ${error.message}")
+            }
         }
     }
 

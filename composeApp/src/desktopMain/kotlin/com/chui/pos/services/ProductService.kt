@@ -60,4 +60,13 @@ class ProductService(private val httpClient: HttpClient) {
         logger.error("Failed to search products with query '$query'", e)
         Result.failure(e)
     }
+
+    suspend fun getProductsByCategory(categoryId: Int): Result<List<ProductResponse>> = try {
+        Result.success(httpClient.get(PRODUCTS_ENDPOINT) {
+            url { parameters.append("categoryId", categoryId.toString()) }
+        }.body())
+    } catch (e: Exception) {
+        logger.error("Failed to fetch products for category id $categoryId", e)
+        Result.failure(e)
+    }
 }

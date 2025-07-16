@@ -3,6 +3,7 @@ package com.chui.pos.screens
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -29,6 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import com.chui.pos.dtos.CartItem
+import com.chui.pos.dtos.CategoryResponse
 import com.chui.pos.dtos.PaymentMethod
 import com.chui.pos.dtos.PaymentRequest
 import com.chui.pos.dtos.ProductResponse
@@ -299,7 +301,19 @@ private fun ProductListView(viewModel: PosViewModel) {
             }
         }
 
+
+
         Spacer(Modifier.height(8.dp))
+        val productsUiState = viewModel.productsState
+        if (productsUiState is ProductsUiState.Success) {
+            CategoryFilterRow(
+                categories = productsUiState.categories,
+                selectedCategoryId = viewModel.selectedCategoryId,
+                onCategorySelected = viewModel::onCategorySelected
+            )
+            Spacer(Modifier.height(16.dp))
+        }
+
         when (val state = viewModel.productsState) {
             is ProductsUiState.Loading -> {
                 Box(
@@ -328,6 +342,35 @@ private fun ProductListView(viewModel: PosViewModel) {
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun CategoryFilterRow(
+    categories: List<CategoryResponse>,
+    selectedCategoryId: Int?,
+    onCategorySelected: (Int?) -> Unit
+) {
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // "All" button
+        item {
+            FilterChip(
+                selected = selectedCategoryId == null,
+                onClick = { onCategorySelected(null) },
+                label = { Text("All") }
+            )
+        }
+        // Category buttons
+        items(categories, key = { it.id }) { category ->
+            FilterChip(
+                selected = selectedCategoryId == category.id,
+                onClick = { onCategorySelected(category.id) },
+                label = { Text(category.name) }
+            )
         }
     }
 }

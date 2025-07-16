@@ -63,7 +63,7 @@ val appModule = module {
 
     // ViewModels
     factory { LoginViewModel(get(), get()) }
-    factory { PosViewModel(get(), get()) }
+    factory { PosViewModel(get(), get(), get()) }
     factory { UnitViewModel(get() ) }
     factory { CategoryViewModel(get() ) }
     factory { ProductViewModel(get(), get(), get()) }
