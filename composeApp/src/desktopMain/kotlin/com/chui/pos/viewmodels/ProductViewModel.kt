@@ -9,8 +9,10 @@ import com.chui.pos.dtos.*
 import com.chui.pos.services.CategoryService
 import com.chui.pos.services.ProductService
 import com.chui.pos.services.UnitService
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 data class ProductFormData(
@@ -59,6 +61,13 @@ class ProductViewModel(
         private set
 
     val isEditing: Boolean get() = selectedProductId != null
+
+    // Search State
+    var searchQuery by mutableStateOf("")
+        private set
+    var searchResults by mutableStateOf<List<ProductResponse>>(emptyList())
+        private set
+    private var searchJob: Job? = null
 
     init {
         fetchAllData()
@@ -143,6 +152,33 @@ class ProductViewModel(
             showDeleteConfirmDialog = false
         }
     }
+
+    // --- Search ---
+    fun onSearchQueryChange(query: String) {
+        searchQuery = query
+        searchJob?.cancel()
+        if (query.isBlank()) {
+            searchResults = emptyList()
+            return
+        }
+        searchJob = screenModelScope.launch {
+            delay(300L) // debounce
+            productService.searchProducts(query)
+                .onSuccess { searchResults = it }
+                .onFailure {
+                    println("Search failed: ${it.message}")
+                    searchResults = emptyList()
+                }
+        }
+    }
+
+    fun onSearchResultSelected(product: ProductResponse) {
+        onProductSelected(product)
+        searchQuery = ""
+        searchResults = emptyList()
+        searchJob?.cancel()
+    }
+
 
     private fun fetchAllData() {
         uiState = ProductsOnlyUiState.Loading

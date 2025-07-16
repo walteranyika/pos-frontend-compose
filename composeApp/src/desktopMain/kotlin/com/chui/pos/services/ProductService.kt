@@ -50,4 +50,14 @@ class ProductService(private val httpClient: HttpClient) {
         logger.error("Failed to delete product with id $id", e)
         Result.failure(e)
     }
+
+
+    suspend fun searchProducts(query: String): Result<List<ProductResponse>> = try {
+        Result.success(httpClient.get(PRODUCTS_ENDPOINT) {
+            url { parameters.append("q", query) }
+        }.body())
+    } catch (e: Exception) {
+        logger.error("Failed to search products with query '$query'", e)
+        Result.failure(e)
+    }
 }

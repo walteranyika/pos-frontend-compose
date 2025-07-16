@@ -5,7 +5,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -45,7 +48,7 @@ object ProductsScreen : Screen {
                 Card(modifier = Modifier.weight(2f).padding(start = 8.dp)) {
                     ProductList(
                         uiState = uiState,
-                        onProductSelected = viewModel::onProductSelected
+                        viewModel=viewModel
                     )
                 }
             }
@@ -159,26 +162,70 @@ private fun <T> DropdownSelector(
 }
 
 
+
 @Composable
-private fun ProductList(uiState: ProductsOnlyUiState, onProductSelected: (ProductResponse) -> Unit) {
-    when (uiState) {
-        is ProductsOnlyUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        is ProductsOnlyUiState.Error -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(uiState.message, color = MaterialTheme.colorScheme.error) }
-        is ProductsOnlyUiState.Success -> {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(uiState.products, key = { it.id }) { product ->
-                    ListItem(
-                        headlineContent = { Text(product.name, style = MaterialTheme.typography.titleMedium) },
-                        supportingContent = { Text("Code: ${product.code} | Price: ${product.price}") },
-                        overlineContent = { Text(product.category.name) },
-                        modifier = Modifier.clickable { onProductSelected(product) }
+@OptIn(ExperimentalMaterial3Api::class)
+private fun ProductList(viewModel: ProductViewModel, uiState: ProductsOnlyUiState) {
+    val onProductSelected = viewModel::onProductSelected
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        val searchResults = viewModel.searchResults
+        val isDropdownVisible = searchResults.isNotEmpty() && viewModel.searchQuery.isNotBlank()
+
+        ExposedDropdownMenuBox(
+            expanded = isDropdownVisible,
+            onExpandedChange = { /* Controlled by search results */ }
+        ) {
+            OutlinedTextField(
+                value = viewModel.searchQuery,
+                onValueChange = viewModel::onSearchQueryChange,
+                label = { Text("Search Products...") },
+                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                trailingIcon = {
+                    if (viewModel.searchQuery.isNotBlank()) {
+                        IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
+                            Icon(Icons.Default.Clear, "Clear search")
+                        }
+                    }
+                }
+            )
+
+            ExposedDropdownMenu(
+                expanded = isDropdownVisible,
+                onDismissRequest = { /* We don't want this */ }
+            ) {
+                searchResults.forEach { product ->
+                    DropdownMenuItem(
+                        text = { Text("${product.name} (Code: ${product.code})") },
+                        onClick = { viewModel.onSearchResultSelected(product) }
                     )
-                    HorizontalDivider()
+                }
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        when (uiState) {
+            is ProductsOnlyUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            is ProductsOnlyUiState.Error -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(uiState.message, color = MaterialTheme.colorScheme.error) }
+            is ProductsOnlyUiState.Success -> {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    itemsIndexed(uiState.products, key = { _, product -> product.id }) { index, product ->
+                        ListItem(
+                            leadingContent = { Text("${index + 1}.") },
+                            headlineContent = { Text(product.name, style = MaterialTheme.typography.titleMedium) },
+                            supportingContent = { Text("Code: ${product.code} | Price: ${product.price}") },
+                            overlineContent = { Text(product.category.name) },
+                            modifier = Modifier.clickable { onProductSelected(product) }
+                        )
+                        HorizontalDivider()
+                    }
                 }
             }
         }
     }
 }
+
 
 
 @Composable
