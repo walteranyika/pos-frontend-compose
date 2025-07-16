@@ -23,7 +23,7 @@ fun main() {
     application {
         var navigator: Navigator? by remember { mutableStateOf(null) }
         val authManager = koinInject<AuthManager>()
-        val isLoggedIn = true //by authManager.isLoggedInState.collectAsState()
+        val isLoggedIn by authManager.isLoggedInState.collectAsState()
         val windowState = rememberWindowState(placement = WindowPlacement.Maximized)
 
 
