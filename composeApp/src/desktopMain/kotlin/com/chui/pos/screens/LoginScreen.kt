@@ -20,7 +20,8 @@ import com.chui.pos.viewmodels.LoginViewModel
 import org.koin.compose.koinInject
 
 
-class LoginScreen : Screen {
+object LoginScreen : Screen {
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow

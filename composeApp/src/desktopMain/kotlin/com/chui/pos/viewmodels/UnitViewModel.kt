@@ -8,6 +8,8 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import com.chui.pos.dtos.ProductUnitRequest
 import com.chui.pos.dtos.ProductUnitResponse
 import com.chui.pos.services.UnitService
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 sealed interface UnitsUiState {
@@ -20,6 +22,13 @@ class UnitViewModel(private val unitService: UnitService) : ScreenModel {
 
     var uiState by mutableStateOf<UnitsUiState>(UnitsUiState.Loading)
         private set
+
+    // Search State
+    var searchQuery by mutableStateOf("")
+        private set
+    var searchResults by mutableStateOf<List<ProductUnitResponse>>(emptyList())
+        private set
+    private var searchJob: Job? = null
 
     // Form State
     var formName by mutableStateOf("")
@@ -70,6 +79,32 @@ class UnitViewModel(private val unitService: UnitService) : ScreenModel {
     fun onDismissDeleteDialog() {
         showDeleteConfirmDialog = false
     }
+
+    fun onSearchQueryChange(query: String) {
+        searchQuery = query
+        searchJob?.cancel()
+        if (query.isBlank()) {
+            searchResults = emptyList()
+            return
+        }
+        searchJob = screenModelScope.launch {
+            delay(300L) // debounce
+            unitService.searchUnits(query)
+                .onSuccess { searchResults = it }
+                .onFailure {
+                    println("Search failed: ${it.message}")
+                    searchResults = emptyList()
+                }
+        }
+    }
+
+    fun onSearchResultSelected(unit: ProductUnitResponse) {
+        onUnitSelected(unit)
+        searchQuery = ""
+        searchResults = emptyList()
+        searchJob?.cancel()
+    }
+
 
     fun confirmDelete() {
         val id = selectedUnitId ?: return // Guard against null id

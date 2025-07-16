@@ -42,7 +42,7 @@ fun main() {
                         Separator()
                         Item("Logout", onClick = {
                             authManager.clearSession()
-                            navigator?.replaceAll(LoginScreen())
+                            navigator?.replaceAll(LoginScreen)
                         })
                         Item("Exit", onClick = ::exitApplication)
                     }
@@ -61,7 +61,7 @@ fun main() {
                 }
             }
             MaterialTheme {
-                Navigator(LoginScreen()) { nav ->
+                Navigator(LoginScreen) { nav ->
                     SideEffect { navigator = nav }
                     SlideTransition(nav)
                 }

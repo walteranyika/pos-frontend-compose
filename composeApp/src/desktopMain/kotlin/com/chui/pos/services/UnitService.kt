@@ -53,4 +53,13 @@ class UnitService(private val httpClient: HttpClient) {
         logger.error("Failed to delete unit with id $id", e)
         Result.failure(e)
     }
+
+    suspend fun searchUnits(query: String): Result<List<ProductUnitResponse>> = try {
+        Result.success(httpClient.get(UNITS_ENDPOINT) {
+            url { parameters.append("q", query) }
+        }.body())
+    } catch (e: Exception) {
+        logger.error("Failed to search units with query '$query'", e)
+        Result.failure(e)
+    }
 }

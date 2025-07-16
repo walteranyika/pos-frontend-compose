@@ -4,6 +4,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -41,8 +44,8 @@ object UnitsScreen : Screen {
                 // Right Panel: List
                 Card(modifier = Modifier.weight(2f).padding(start = 8.dp)) {
                     UnitList(
-                        uiState = uiState,
-                        onUnitSelected = viewModel::onUnitSelected
+                        onUnitSelected = viewModel::onUnitSelected,
+                        uiState = uiState
                     )
                 }
             }
@@ -121,6 +124,67 @@ private fun UnitList(uiState: UnitsUiState, onUnitSelected: (ProductUnitResponse
 }
 
 
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun UnitList(viewModel: UnitViewModel, uiState: UnitsUiState) {
+    val onUnitSelected = viewModel::onUnitSelected
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        val searchResults = viewModel.searchResults
+        val isDropdownVisible = searchResults.isNotEmpty() && viewModel.searchQuery.isNotBlank()
+
+        ExposedDropdownMenuBox(
+            expanded = isDropdownVisible,
+            onExpandedChange = { /* Controlled by search results */ }
+        ) {
+            OutlinedTextField(
+                value = viewModel.searchQuery,
+                onValueChange = viewModel::onSearchQueryChange,
+                label = { Text("Search Units...") },
+                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                trailingIcon = {
+                    if (viewModel.searchQuery.isNotBlank()) {
+                        IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
+                            Icon(Icons.Default.Clear, "Clear search")
+                        }
+                    }
+                }
+            )
+
+            ExposedDropdownMenu(
+                expanded = isDropdownVisible,
+                onDismissRequest = { /* We don't want this */ }
+            ) {
+                searchResults.forEach { unit ->
+                    DropdownMenuItem(
+                        text = { Text("${unit.name} (${unit.shortName})") },
+                        onClick = { viewModel.onSearchResultSelected(unit) }
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        when (uiState) {
+            is UnitsUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            is UnitsUiState.Error -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(uiState.message) }
+            is UnitsUiState.Success -> {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    itemsIndexed(uiState.units, key = { _, unit -> unit.id }) { index, unit ->
+                        ListItem(
+                            leadingContent = { Text("${index + 1}.") },
+                            headlineContent = { Text(unit.name) },
+                            supportingContent = { Text("Short Name: ${unit.shortName}") },
+                            modifier = Modifier.clickable { onUnitSelected(unit) }
+                        )
+                        HorizontalDivider()
+                    }
+                }
+            }
+        }
+    }
+}
 @Composable
 private fun DeleteConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
