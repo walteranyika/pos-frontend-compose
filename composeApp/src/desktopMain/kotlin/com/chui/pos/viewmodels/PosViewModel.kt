@@ -1,5 +1,7 @@
 package com.chui.pos.viewmodels
 
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -12,6 +14,8 @@ import com.chui.pos.dtos.ProductResponse
 import com.chui.pos.dtos.SaleItemRequest
 import com.chui.pos.services.ProductService
 import com.chui.pos.services.SaleService
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -30,9 +34,19 @@ sealed interface SaleSubmissionState{
     data class Error(val message: String) : SaleSubmissionState
 }
 
+sealed interface PosUiState{
+    object Idle : PosUiState
+    object Loading : PosUiState
+    data class Success(val products: List<ProductResponse>) : PosUiState
+    data class Error(val message: String) : PosUiState
+}
+
 class PosViewModel(private val productService: ProductService,
     private val saleService: SaleService
 ) : ScreenModel {
+
+    private val _uiState = mutableStateOf<PosUiState>(PosUiState.Loading)
+    val uiState: MutableState<PosUiState> = _uiState
 
     var productsState by mutableStateOf<ProductsUiState>(ProductsUiState.Loading)
         private set
@@ -52,6 +66,11 @@ class PosViewModel(private val productService: ProductService,
     var saleSubmissionState by mutableStateOf<SaleSubmissionState>(SaleSubmissionState.Idle)
         private set
 
+    var searchQuery by mutableStateOf("")
+        private set
+    var searchResults by mutableStateOf<List<ProductResponse>>(emptyList())
+        private set
+    private var searchJob: Job? = null
 
 
     init {
@@ -131,6 +150,31 @@ class PosViewModel(private val productService: ProductService,
         }
     }
 
+
+    fun onSearchQueryChange(query: String) {
+        searchQuery = query
+        searchJob?.cancel()
+        if (query.isBlank()) {
+            searchResults = emptyList()
+            return
+        }
+        searchJob = screenModelScope.launch {
+            delay(300L) // debounce
+            productService.searchProducts(query)
+                .onSuccess { searchResults = it }
+                .onFailure {
+                    println("Search failed: ${it.message}")
+                    searchResults = emptyList()
+                }
+        }
+    }
+
+    fun onSearchResultSelected(product: ProductResponse) {
+        onProductClicked(product)
+        searchQuery = ""
+        searchResults = emptyList()
+        searchJob?.cancel()
+    }
     fun resetSaleSubmissionState(){
         saleSubmissionState = SaleSubmissionState.Idle
     }

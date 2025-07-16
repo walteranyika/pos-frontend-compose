@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
@@ -91,7 +92,7 @@ private fun CartView(viewModel: PosViewModel) {
 
             if (cartItems.isEmpty()) {
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    Text("Cart is empty")
+                    Text("Cart is empty", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                 }
             } else {
                 LazyColumn(modifier = Modifier.weight(1f)) {
@@ -260,28 +261,71 @@ fun PaymentDialog(viewModel: PosViewModel) {
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProductListView(viewModel: PosViewModel) {
-    when (val state = viewModel.productsState) {
-        is ProductsUiState.Loading -> {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) { CircularProgressIndicator() }
-        }
-        is ProductsUiState.Error -> {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                Text("Error: ${state.message}", color = MaterialTheme.colorScheme.error)
+    Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+        val searchResults = viewModel.searchResults
+        val isDropdownVisible = searchResults.isNotEmpty() && viewModel.searchQuery.isNotBlank()
+
+        ExposedDropdownMenuBox(
+            expanded = isDropdownVisible,
+            onExpandedChange = { /* Controlled by search results */ }
+        ) {
+            OutlinedTextField(
+                value = viewModel.searchQuery,
+                onValueChange = viewModel::onSearchQueryChange,
+                label = { Text("Search Products by name or code...") },
+                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                trailingIcon = {
+                    if (viewModel.searchQuery.isNotBlank()) {
+                        IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
+                            Icon(Icons.Default.Clear, "Clear search")
+                        }
+                    }
+                }
+            )
+
+            ExposedDropdownMenu(
+                expanded = isDropdownVisible,
+                onDismissRequest = { /* We don't want this */ }
+            ) {
+                searchResults.forEach { product ->
+                    DropdownMenuItem(
+                        text = { Text("${product.name} (${product.code})") },
+                        onClick = { viewModel.onSearchResultSelected(product) }
+                    )
+                }
             }
         }
-        is ProductsUiState.Success -> {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 160.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(state.products, key = { it.id }) { product ->
-                    ProductGridItem(
-                        product = product,
-                        onClick = { viewModel.onProductClicked(product) }
-                    )
+
+        Spacer(Modifier.height(8.dp))
+        when (val state = viewModel.productsState) {
+            is ProductsUiState.Loading -> {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) { CircularProgressIndicator() }
+            }
+
+            is ProductsUiState.Error -> {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Text("Error: ${state.message}", color = MaterialTheme.colorScheme.error)
+                }
+            }
+
+            is ProductsUiState.Success -> {
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 160.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(state.products, key = { it.id }) { product ->
+                        ProductGridItem(
+                            product = product,
+                            onClick = { viewModel.onProductClicked(product) }
+                        )
+                    }
                 }
             }
         }
