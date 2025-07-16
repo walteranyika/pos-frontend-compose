@@ -1,5 +1,6 @@
 package com.chui.pos.viewmodels
 
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -8,6 +9,8 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import com.chui.pos.dtos.CategoryRequest
 import com.chui.pos.dtos.CategoryResponse
 import com.chui.pos.services.CategoryService
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 sealed interface CategoriesUiState {
@@ -18,8 +21,8 @@ sealed interface CategoriesUiState {
 
 class CategoryViewModel(private val categoryService: CategoryService) : ScreenModel {
 
-    var uiState by mutableStateOf<CategoriesUiState>(CategoriesUiState.Loading)
-        private set
+    private val _uiState = mutableStateOf<CategoriesUiState>(CategoriesUiState.Loading)
+    val uiState: State<CategoriesUiState> = _uiState
 
     // Form State
     var formName by mutableStateOf("")
@@ -28,9 +31,15 @@ class CategoryViewModel(private val categoryService: CategoryService) : ScreenMo
         private set
     var selectedCategoryId by mutableStateOf<Int?>(null)
         private set
-
     var showDeleteConfirmDialog by mutableStateOf(false)
         private set
+
+    // Search State
+    var searchQuery by mutableStateOf("")
+        private set
+    var searchResults by mutableStateOf<List<CategoryResponse>>(emptyList())
+        private set
+    private var searchJob: Job? = null
 
     val isEditing: Boolean
         get() = selectedCategoryId != null
@@ -73,7 +82,6 @@ class CategoryViewModel(private val categoryService: CategoryService) : ScreenMo
                 clearSelection()
                 fetchCategories() // Refresh list
             }.onFailure {
-                // In a real app, you'd show a snackbar or toast
                 println("Error saving category: ${it.message}")
             }
         }
@@ -99,22 +107,43 @@ class CategoryViewModel(private val categoryService: CategoryService) : ScreenMo
         }
     }
 
+    fun onSearchQueryChange(query: String) {
+        searchQuery = query
+        searchJob?.cancel()
+        if (query.isBlank()) {
+            searchResults = emptyList()
+            return
+        }
+        searchJob = screenModelScope.launch {
+            delay(300L) // debounce
+            categoryService.searchCategories(query)
+                .onSuccess { searchResults = it }
+                .onFailure { searchResults = emptyList() }
+        }
+    }
+
+    fun onSearchResultSelected(category: CategoryResponse) {
+        onCategorySelected(category)
+        searchQuery = ""
+        searchResults = emptyList()
+        searchJob?.cancel()
+    }
+
     private fun fetchCategories() {
-        uiState = CategoriesUiState.Loading
+        _uiState.value = CategoriesUiState.Loading
         screenModelScope.launch {
             categoryService.getCategories().onSuccess { categories ->
-                uiState = CategoriesUiState.Success(categories)
-                // If we are not in edit mode, pre-populate the form for a new entry
+                _uiState.value = CategoriesUiState.Success(categories)
                 if (!isEditing) {
                     clearSelection()
                 }
             }
-                .onFailure { error -> uiState = CategoriesUiState.Error(error.message ?: "Unknown error") }
+                .onFailure { error -> _uiState.value = CategoriesUiState.Error(error.message ?: "Unknown error") }
         }
     }
 
     private fun suggestNextCategoryCode(): String {
-        val currentState = uiState
+        val currentState = _uiState.value
         if (currentState is CategoriesUiState.Success) {
             val lastCode = currentState.categories.mapNotNull { it.code.toIntOrNull() }.maxOrNull() ?: 0
             return (lastCode + 1).toString().padStart(3, '0')

@@ -4,13 +4,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
-import com.chui.pos.dtos.CategoryResponse
 import com.chui.pos.viewmodels.CategoriesUiState
 import com.chui.pos.viewmodels.CategoryViewModel
 import org.koin.compose.koinInject
@@ -20,7 +22,7 @@ object CategoriesScreen : Screen {
     @Composable
     override fun Content() {
         val viewModel = koinInject<CategoryViewModel>()
-        val uiState = viewModel.uiState
+        val uiState by viewModel.uiState
 
         Scaffold(
             topBar = { TopAppBar(title = { Text("Manage Product Categories") }) }
@@ -41,8 +43,8 @@ object CategoriesScreen : Screen {
                 // Right Panel: List
                 Card(modifier = Modifier.weight(2f).padding(start = 8.dp)) {
                     CategoryList(
-                        uiState = uiState,
-                        onCategorySelected = viewModel::onCategorySelected
+                        viewModel = viewModel,
+                        uiState = uiState
                     )
                 }
             }
@@ -108,20 +110,61 @@ private fun CategoryForm(viewModel: CategoryViewModel) {
 }
 
 @Composable
-private fun CategoryList(uiState: CategoriesUiState, onCategorySelected: (CategoryResponse) -> Unit) {
-    when (uiState) {
-        is CategoriesUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        is CategoriesUiState.Error -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(uiState.message) }
-        is CategoriesUiState.Success -> {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                itemsIndexed(uiState.categories, key = { _, category -> category.id }) { index, category ->
-                    ListItem(
-                        leadingContent = { Text("${index + 1}.") },
-                        headlineContent = { Text(category.name) },
-                        supportingContent = { Text("Code: ${category.code}") },
-                        modifier = Modifier.clickable { onCategorySelected(category) }
+@OptIn(ExperimentalMaterial3Api::class)
+private fun CategoryList(viewModel: CategoryViewModel, uiState: CategoriesUiState) {
+    val onCategorySelected = viewModel::onCategorySelected
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        val searchResults = viewModel.searchResults
+        val isDropdownVisible = searchResults.isNotEmpty() && viewModel.searchQuery.isNotBlank()
+
+        ExposedDropdownMenuBox(
+            expanded = isDropdownVisible,
+            onExpandedChange = { /* Controlled by search results */ }
+        ) {
+            OutlinedTextField(
+                value = viewModel.searchQuery,
+                onValueChange = viewModel::onSearchQueryChange,
+                label = { Text("Search Categories...") },
+                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                trailingIcon = {
+                    if (viewModel.searchQuery.isNotBlank()) {
+                        IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
+                            Icon(Icons.Default.Clear, "Clear search")
+                        }
+                    }
+                }
+            )
+
+            ExposedDropdownMenu(
+                expanded = isDropdownVisible,
+                onDismissRequest = { /* We don't want this */ }
+            ) {
+                searchResults.forEach { category ->
+                    DropdownMenuItem(
+                        text = { Text("${category.name} (${category.code})") },
+                        onClick = { viewModel.onSearchResultSelected(category) }
                     )
-                    HorizontalDivider()
+                }
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        when (uiState) {
+            is CategoriesUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            is CategoriesUiState.Error -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(uiState.message) }
+            is CategoriesUiState.Success -> {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    itemsIndexed(uiState.categories, key = { _, category -> category.id }) { index, category ->
+                        ListItem(
+                            leadingContent = { Text("${index + 1}.") },
+                            headlineContent = { Text(category.name) },
+                            supportingContent = { Text("Code: ${category.code}") },
+                            modifier = Modifier.clickable { onCategorySelected(category) }
+                        )
+                        HorizontalDivider()
+                    }
                 }
             }
         }

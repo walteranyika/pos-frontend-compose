@@ -47,10 +47,16 @@ fun main() {
                         Item("Exit", onClick = ::exitApplication)
                     }
 
-                    Menu("Products") {
-                        Item("Manage Products",onClick = { navigator?.push(ProductsScreen) })
-                        Item("Manage Units", onClick = { navigator?.push(UnitsScreen) })
-                        Item("Manage Categories", onClick = { navigator?.push(CategoriesScreen) })
+                    Menu("Management") {
+                        val productMenuItems = listOf(
+                            "Manage Products" to ProductsScreen,
+                            "Manage Units" to UnitsScreen,
+                            "Manage Categories" to CategoriesScreen
+                        )
+
+                        productMenuItems.forEach { (title, screen) ->
+                            Item(title, onClick = { navigator?.push(screen) })
+                        }
                     }
                 }
             }

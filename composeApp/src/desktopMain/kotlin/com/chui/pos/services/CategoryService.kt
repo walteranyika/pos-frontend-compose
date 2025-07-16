@@ -54,4 +54,15 @@ class CategoryService(private val httpClient: HttpClient) {
         logger.error("Failed to delete category with id $id", e)
         Result.failure(e)
     }
+
+    suspend fun searchCategories(query: String): Result<List<CategoryResponse>> = try {
+        Result.success(httpClient.get(CATEGORIES_ENDPOINT) {
+            url {
+                parameters.append("query", query)
+            }
+        }.body())
+    } catch (e: Exception) {
+        logger.error("Failed to search categories with query $query")
+        Result.failure(e)
+    }
 }
