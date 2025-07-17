@@ -14,6 +14,7 @@ import com.chui.pos.dtos.PaymentRequest
 import com.chui.pos.dtos.ProductResponse
 import com.chui.pos.dtos.SaleItemRequest
 import com.chui.pos.services.CategoryService
+import com.chui.pos.services.PrintingService
 import com.chui.pos.services.ProductService
 import com.chui.pos.services.SaleService
 import kotlinx.coroutines.Job
@@ -31,23 +32,25 @@ sealed interface ProductsUiState {
     data class Error(val message: String) : ProductsUiState
 }
 
-sealed interface SaleSubmissionState{
+sealed interface SaleSubmissionState {
     object Idle : SaleSubmissionState
     object Loading : SaleSubmissionState
     object Success : SaleSubmissionState
     data class Error(val message: String) : SaleSubmissionState
 }
 
-sealed interface PosUiState{
+sealed interface PosUiState {
     object Idle : PosUiState
     object Loading : PosUiState
     data class Success(val products: List<ProductResponse>) : PosUiState
     data class Error(val message: String) : PosUiState
 }
 
-class PosViewModel(private val productService: ProductService,
+class PosViewModel(
+    private val productService: ProductService,
     private val saleService: SaleService,
-    private val categoryService: CategoryService
+    private val categoryService: CategoryService,
+    private val printingService: PrintingService
 ) : ScreenModel {
 
     private val _uiState = mutableStateOf<PosUiState>(PosUiState.Loading)
@@ -66,7 +69,7 @@ class PosViewModel(private val productService: ProductService,
         private set
 
     private val _payments = MutableStateFlow<List<PaymentRequest>>(emptyList())
-    val  payments = _payments.asStateFlow()
+    val payments = _payments.asStateFlow()
 
     var saleSubmissionState by mutableStateOf<SaleSubmissionState>(SaleSubmissionState.Idle)
         private set
@@ -80,15 +83,19 @@ class PosViewModel(private val productService: ProductService,
     var selectedCategoryId by mutableStateOf<Int?>(null)
         private set
 
+    var printReceipt by mutableStateOf(true) // Default to true
+        private set
+
+
     init {
         fetchProductsAndCategories()
     }
 
-    fun onOpenPaymentDialog(){
+    fun onOpenPaymentDialog() {
         showPaymentDialog = true
     }
 
-    fun onDismissPaymentDialog(){
+    fun onDismissPaymentDialog() {
         showPaymentDialog = false
     }
 
@@ -154,15 +161,15 @@ class PosViewModel(private val productService: ProductService,
         }
     }
 
-    fun addPayment(payment: PaymentRequest){
+    fun addPayment(payment: PaymentRequest) {
         _payments.update { it + payment }
     }
 
-    fun removePayment(payment: PaymentRequest){
+    fun removePayment(payment: PaymentRequest) {
         _payments.update { it - payment }
     }
 
-    fun submitSale(){
+    fun submitSale() {
         saleSubmissionState = SaleSubmissionState.Loading
         screenModelScope.launch {
             val saleItems = _cartItems.value.values.map {
@@ -185,11 +192,19 @@ class PosViewModel(private val productService: ProductService,
                     _cartItems.value = emptyMap()
                     _payments.value = emptyList()
                     recalculateTotal(emptyMap())
-                    showPaymentDialog=false
+                    showPaymentDialog = false
+                    if (printReceipt) {
+                        //printingService.printReceipt(saleResponse)
+                    }
                 }.onFailure {
                     saleSubmissionState = SaleSubmissionState.Error(it.message ?: "Failed to submit sale")
                 }
         }
+    }
+
+
+    fun onPrintReceiptChanged(shouldPrint: Boolean) {
+        printReceipt = shouldPrint
     }
 
 
@@ -217,9 +232,11 @@ class PosViewModel(private val productService: ProductService,
         searchResults = emptyList()
         searchJob?.cancel()
     }
-    fun resetSaleSubmissionState(){
+
+    fun resetSaleSubmissionState() {
         saleSubmissionState = SaleSubmissionState.Idle
     }
+
     fun incrementQuantity(productId: Int) {
         updateItemQuantity(productId, 1)
     }
@@ -243,7 +260,8 @@ class PosViewModel(private val productService: ProductService,
             val cartItem = mutableCart[productId]
             if (cartItem != null) {
                 val newQuantity = cartItem.quantity + delta
-                if (newQuantity > 0) mutableCart[productId] = cartItem.copy(quantity = newQuantity) else mutableCart.remove(productId)
+                if (newQuantity > 0) mutableCart[productId] =
+                    cartItem.copy(quantity = newQuantity) else mutableCart.remove(productId)
                 recalculateTotal(mutableCart)
             }
             mutableCart

@@ -4,6 +4,7 @@ import com.chui.pos.data.ApiConfig
 import com.chui.pos.managers.AuthManager
 import com.chui.pos.services.CategoryService
 import com.chui.pos.services.LoginService
+import com.chui.pos.services.PrintingService
 import com.chui.pos.services.ProductService
 import com.chui.pos.services.ReportService
 import com.chui.pos.services.SaleService
@@ -63,10 +64,11 @@ val appModule = module {
     single { CategoryService(get()) }
     single { ProductService(get()) }
     single { ReportService(get()) }
+    single { PrintingService() }
 
     // ViewModels
     factory { LoginViewModel(get(), get()) }
-    factory { PosViewModel(get(), get(), get()) }
+    factory { PosViewModel(get(), get(), get(), get()) }
     factory { UnitViewModel(get() ) }
     factory { ReportsViewModel(get() ) }
     factory { CategoryViewModel(get() ) }

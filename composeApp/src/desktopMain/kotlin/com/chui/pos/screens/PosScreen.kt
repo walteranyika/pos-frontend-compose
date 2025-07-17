@@ -247,6 +247,25 @@ fun PaymentDialog(viewModel: PosViewModel) {
                         HorizontalDivider()
                     }
                 }
+
+
+                // Print Receipt Checkbox
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.onPrintReceiptChanged(!viewModel.printReceipt) }
+                        .padding(vertical = 8.dp)
+                ) {
+                    Checkbox(
+                        checked = viewModel.printReceipt,
+                        onCheckedChange = { viewModel.onPrintReceiptChanged(it) }
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Print Receipt?")
+                }
+
+                Spacer(Modifier.height(16.dp))
             }
         },
         confirmButton = {
