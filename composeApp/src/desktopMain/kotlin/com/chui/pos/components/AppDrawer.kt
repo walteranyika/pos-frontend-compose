@@ -29,7 +29,8 @@ fun AppDrawerContent(
     val managementScreens = listOf(
         DrawerItem("Products", Icons.Default.Inventory, ProductsScreen),
         DrawerItem("Categories", Icons.Default.Category, CategoriesScreen),
-        DrawerItem("Units", Icons.Default.SquareFoot, UnitsScreen)
+        DrawerItem("Units", Icons.Default.SquareFoot, UnitsScreen),
+        DrawerItem("Reports", Icons.Default.Assessment, ReportsScreen)
     )
 
     ModalDrawerSheet {

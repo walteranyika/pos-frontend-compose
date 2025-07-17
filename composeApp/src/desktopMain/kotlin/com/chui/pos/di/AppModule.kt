@@ -5,12 +5,14 @@ import com.chui.pos.managers.AuthManager
 import com.chui.pos.services.CategoryService
 import com.chui.pos.services.LoginService
 import com.chui.pos.services.ProductService
+import com.chui.pos.services.ReportService
 import com.chui.pos.services.SaleService
 import com.chui.pos.services.UnitService
 import com.chui.pos.viewmodels.CategoryViewModel
 import com.chui.pos.viewmodels.LoginViewModel
 import com.chui.pos.viewmodels.PosViewModel
 import com.chui.pos.viewmodels.ProductViewModel
+import com.chui.pos.viewmodels.ReportsViewModel
 import com.chui.pos.viewmodels.UnitViewModel
 import com.russhwolf.settings.Settings
 import io.ktor.client.HttpClient
@@ -60,11 +62,13 @@ val appModule = module {
     single { UnitService(get()) }
     single { CategoryService(get()) }
     single { ProductService(get()) }
+    single { ReportService(get()) }
 
     // ViewModels
     factory { LoginViewModel(get(), get()) }
     factory { PosViewModel(get(), get(), get()) }
     factory { UnitViewModel(get() ) }
+    factory { ReportsViewModel(get() ) }
     factory { CategoryViewModel(get() ) }
     factory { ProductViewModel(get(), get(), get()) }
 }
