@@ -44,7 +44,7 @@ object UnitsScreen : Screen {
                 // Right Panel: List
                 Card(modifier = Modifier.weight(2f).padding(start = 8.dp)) {
                     UnitList(
-                        onUnitSelected = viewModel::onUnitSelected,
+                        viewModel= viewModel,
                         uiState = uiState
                     )
                 }

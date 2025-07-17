@@ -9,6 +9,7 @@ import com.chui.pos.di.appModule
 import com.chui.pos.managers.AuthManager
 import com.chui.pos.screens.CategoriesScreen
 import com.chui.pos.screens.LoginScreen
+import com.chui.pos.screens.PosScreen
 import com.chui.pos.screens.ProductsScreen
 import com.chui.pos.screens.UnitsScreen
 import org.koin.compose.koinInject
@@ -36,7 +37,8 @@ fun main() {
                 MenuBar {
                     val menuPadding = " ".repeat(20)
                     Menu("System") {
-
+                        Item("POS", onClick = { navigator?.push(PosScreen)  })
+                        Separator()
                         Item("Settings", onClick = { /* TODO */ })
                         Item("Backup", onClick = { /* TODO */ })
                         Separator()
