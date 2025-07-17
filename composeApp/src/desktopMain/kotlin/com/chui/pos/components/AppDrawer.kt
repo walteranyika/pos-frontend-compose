@@ -1,0 +1,95 @@
+package com.chui.pos.components
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.ApplicationScope
+import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.navigator.Navigator
+import com.chui.pos.managers.AuthManager
+import com.chui.pos.screens.*
+
+@Composable
+fun AppDrawerContent(
+    navigator: Navigator,
+    authManager: AuthManager,
+    applicationScope: ApplicationScope,
+    closeDrawer: () -> Unit
+) {
+    // Define menu items in a structured way
+    val mainScreens = listOf(
+        DrawerItem("POS", Icons.Default.ShoppingCart, PosScreen)
+    )
+
+    val managementScreens = listOf(
+        DrawerItem("Products", Icons.Default.Inventory, ProductsScreen),
+        DrawerItem("Categories", Icons.Default.Category, CategoriesScreen),
+        DrawerItem("Units", Icons.Default.SquareFoot, UnitsScreen)
+    )
+
+    ModalDrawerSheet {
+        Spacer(Modifier.height(12.dp))
+
+        // Main Navigation
+        mainScreens.forEach { item ->
+            NavigationDrawerItem(
+                icon = { Icon(item.icon, contentDescription = item.label) },
+                label = { Text(item.label) },
+                selected = navigator.lastItem == item.screen,
+                onClick = {
+                    navigator.replaceAll(item.screen)
+                    closeDrawer()
+                },
+                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+            )
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+        // Management Screens
+        Text("Management", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 16.dp))
+        Spacer(Modifier.height(8.dp))
+        managementScreens.forEach { item ->
+            NavigationDrawerItem(
+                icon = { Icon(item.icon, contentDescription = item.label) },
+                label = { Text(item.label) },
+                selected = navigator.lastItem == item.screen,
+                onClick = {
+                    navigator.push(item.screen)
+                    closeDrawer()
+                },
+                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+            )
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+        // System Actions
+        NavigationDrawerItem(
+            icon = { Icon(Icons.Default.Logout, contentDescription = "Logout") },
+            label = { Text("Logout") },
+            selected = false,
+            onClick = {
+                authManager.clearSession()
+                navigator.replaceAll(LoginScreen)
+                closeDrawer()
+            },
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
+
+        NavigationDrawerItem(
+            icon = { Icon(Icons.Default.ExitToApp, contentDescription = "Exit") },
+            label = { Text("Exit") },
+            selected = false,
+            onClick = { applicationScope.exitApplication() },
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
+    }
+}
+
+private data class DrawerItem(val label: String, val icon: ImageVector, val screen: Screen)

@@ -1,20 +1,25 @@
 package com.chui.pos
 
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.*
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.transitions.SlideTransition
+import com.chui.pos.components.AppDrawerContent
 import com.chui.pos.di.appModule
 import com.chui.pos.managers.AuthManager
-import com.chui.pos.screens.CategoriesScreen
 import com.chui.pos.screens.LoginScreen
-import com.chui.pos.screens.PosScreen
-import com.chui.pos.screens.ProductsScreen
-import com.chui.pos.screens.UnitsScreen
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.core.context.startKoin
 
+@OptIn(ExperimentalMaterial3Api::class)
 fun main() {
 
     startKoin {
@@ -26,46 +31,52 @@ fun main() {
         val authManager = koinInject<AuthManager>()
         val isLoggedIn by authManager.isLoggedInState.collectAsState()
         val windowState = rememberWindowState(placement = WindowPlacement.Maximized)
-
+        val drawerState = rememberDrawerState(DrawerValue.Closed)
+        val scope = rememberCoroutineScope()
 
         Window(
             onCloseRequest = ::exitApplication,
             title = "Point of Sale System",
             state = windowState
         ) {
-            if (isLoggedIn) {
-                MenuBar {
-                    val menuPadding = " ".repeat(20)
-                    Menu("System") {
-                        Item("POS", onClick = { navigator?.push(PosScreen)  })
-                        Separator()
-                        Item("Settings", onClick = { /* TODO */ })
-                        Item("Backup", onClick = { /* TODO */ })
-                        Separator()
-                        Item("Logout", onClick = {
-                            authManager.clearSession()
-                            navigator?.replaceAll(LoginScreen)
-                        })
-                        Item("Exit", onClick = ::exitApplication)
-                    }
-
-                    Menu("Management") {
-                        val productMenuItems = listOf(
-                            "Manage Products" to ProductsScreen,
-                            "Manage Units" to UnitsScreen,
-                            "Manage Categories" to CategoriesScreen
-                        )
-
-                        productMenuItems.forEach { (title, screen) ->
-                            Item(title, onClick = { navigator?.push(screen) })
+            MaterialTheme {
+                Surface(modifier = Modifier.fillMaxSize()) {
+                    Navigator(LoginScreen) { nav ->
+                        SideEffect { navigator = nav }
+                        if (isLoggedIn) {
+                            ModalNavigationDrawer(
+                                drawerState = drawerState,
+                                drawerContent = {
+                                    AppDrawerContent(
+                                        navigator = nav,
+                                        authManager = authManager,
+                                        applicationScope = this@application,
+                                        closeDrawer = { scope.launch { drawerState.close() } }
+                                    )
+                                }
+                            ) {
+                                Scaffold(
+                                    topBar = {
+                                        TopAppBar(
+                                            title = { Text(nav.lastItem.key.substringAfterLast('.').replace("Screen", "")) },
+                                            navigationIcon = {
+                                                IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                                    Icon(Icons.Default.Menu, contentDescription = "Menu")
+                                                }
+                                            }
+                                        )
+                                    }
+                                ) { padding ->
+                                    Box(modifier = Modifier.padding(padding)) {
+                                        SlideTransition(nav)
+                                    }
+                                }
+                            }
+                        } else {
+                            // When not logged in, just show the login screen directly
+                            SlideTransition(nav)
                         }
                     }
-                }
-            }
-            MaterialTheme {
-                Navigator(LoginScreen) { nav ->
-                    SideEffect { navigator = nav }
-                    SlideTransition(nav)
                 }
             }
         }
