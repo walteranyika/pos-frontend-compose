@@ -2,6 +2,7 @@ package com.chui.pos.di
 
 import com.chui.pos.data.ApiConfig
 import com.chui.pos.managers.AuthManager
+import com.chui.pos.managers.SettingsManager
 import com.chui.pos.services.CategoryService
 import com.chui.pos.services.LoginService
 import com.chui.pos.services.PrintingService
@@ -14,6 +15,7 @@ import com.chui.pos.viewmodels.LoginViewModel
 import com.chui.pos.viewmodels.PosViewModel
 import com.chui.pos.viewmodels.ProductViewModel
 import com.chui.pos.viewmodels.ReportsViewModel
+import com.chui.pos.viewmodels.SettingsViewModel
 import com.chui.pos.viewmodels.UnitViewModel
 import com.russhwolf.settings.Settings
 import io.ktor.client.HttpClient
@@ -29,6 +31,7 @@ val appModule = module {
     // Provide the HttpClient as a singleton, which depends on AuthManager
     single {
         val authManager: AuthManager = get()
+        val settingsManager: SettingsManager = get()
         HttpClient(CIO) {
             // Configure JSON serialization
             install(ContentNegotiation) {
@@ -42,7 +45,7 @@ val appModule = module {
             // This block is applied to every outgoing request
             defaultRequest {
                 // Set the base URL from our central config
-                url(ApiConfig.BASE_URL)
+                url(settingsManager.settings.value.baseUrl)
 
                 // If a token exists, add the Authorization header
                 authManager.getToken()?.let { token ->
@@ -54,6 +57,7 @@ val appModule = module {
 
     // Persistence Layer
     single { Settings() }
+    single { SettingsManager() }
     single { AuthManager(get()) }
 
     // Services (now receive HttpClient via constructor)
@@ -64,7 +68,7 @@ val appModule = module {
     single { CategoryService(get()) }
     single { ProductService(get()) }
     single { ReportService(get()) }
-    single { PrintingService() }
+    single { PrintingService(get()) }
 
     // ViewModels
     factory { LoginViewModel(get(), get()) }
@@ -73,4 +77,5 @@ val appModule = module {
     factory { ReportsViewModel(get() ) }
     factory { CategoryViewModel(get() ) }
     factory { ProductViewModel(get(), get(), get()) }
+    factory { SettingsViewModel(get(), get()) }
 }

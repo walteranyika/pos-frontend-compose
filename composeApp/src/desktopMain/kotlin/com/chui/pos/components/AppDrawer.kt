@@ -23,14 +23,15 @@ fun AppDrawerContent(
 ) {
     // Define menu items in a structured way
     val mainScreens = listOf(
-        DrawerItem("POS", Icons.Default.ShoppingCart, PosScreen)
-    )
+        DrawerItem("POS", Icons.Default.ShoppingCart, PosScreen),
+        DrawerItem("Reports", Icons.Default.Assessment, ReportsScreen),
+        )
 
     val managementScreens = listOf(
         DrawerItem("Products", Icons.Default.Inventory, ProductsScreen),
         DrawerItem("Categories", Icons.Default.Category, CategoriesScreen),
         DrawerItem("Units", Icons.Default.SquareFoot, UnitsScreen),
-        DrawerItem("Reports", Icons.Default.Assessment, ReportsScreen)
+        DrawerItem("Settings", Icons.Default.Settings, SettingsScreen),
     )
 
     ModalDrawerSheet {

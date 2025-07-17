@@ -1,30 +1,43 @@
 package com.chui.pos.services
 
 import com.chui.pos.dtos.SaleSummaryResponse
+import com.chui.pos.managers.SettingsManager
 import org.slf4j.LoggerFactory
 import javax.print.*
 
 
-class PrintingService {
+class PrintingService(private val settingsManager: SettingsManager) {
     companion object{
         private const val PRINTER_NAME = "POS-80" // A common name for 80mm thermal printers
         private val logger = LoggerFactory.getLogger(PrintingService::class.java)
     }
 
-    private fun findPrinter(): PrintService? {
+    fun getAvailablePrinters(): List<String> {
         val printServices = PrintServiceLookup.lookupPrintServices(null, null)
-        val foundPrinter = printServices.find { it.name.equals(PRINTER_NAME, ignoreCase = true) }
+        return printServices.map { it.name }
+    }
+
+
+
+    private fun findPrinter(printerName: String): PrintService? {
+        if (printerName.isBlank()) {
+            logger.warn ( "No printer has been configured in settings." )
+            return null
+        }
+        val printServices = PrintServiceLookup.lookupPrintServices(null, null)
+        val foundPrinter = printServices.find { it.name.equals(printerName, ignoreCase = true) }
         if (foundPrinter == null) {
-            logger.error( "Target printer '$PRINTER_NAME' not found." )
-            logger.info ("Available printers: ${printServices.joinToString { it.name }}" )
+            logger.error ("Configured printer '$printerName' not found." )
+            logger.info ( "Available printers: ${printServices.joinToString { it.name }}" )
         }
         return foundPrinter
     }
 
+
     fun printReceipt(sale: SaleSummaryResponse) {
-        val printer = findPrinter()
+        val printerName = settingsManager.settings.value.printerName
+        val printer = findPrinter(printerName)
         if (printer == null) {
-            // In a real app, you might want to show a dialog to the user here.
             return
         }
 
