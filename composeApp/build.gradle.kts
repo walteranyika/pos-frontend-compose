@@ -64,6 +64,7 @@ kotlin {
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
+            implementation("ch.qos.logback:logback-classic:1.4.14")
         }
     }
 }
