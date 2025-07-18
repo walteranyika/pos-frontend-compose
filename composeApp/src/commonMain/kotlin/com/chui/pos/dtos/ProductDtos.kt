@@ -24,7 +24,8 @@ data class ProductResponse(
     val taxMethod: TaxType,
     val image: String?,
     val isActive: Boolean,
-    val note: String?
+    val note: String?,
+    val quantity: Double,
 )
 
 @Serializable

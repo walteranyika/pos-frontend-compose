@@ -31,6 +31,8 @@ fun AppDrawerContent(
         DrawerItem("Products", Icons.Default.Inventory, ProductsScreen),
         DrawerItem("Categories", Icons.Default.Category, CategoriesScreen),
         DrawerItem("Units", Icons.Default.SquareFoot, UnitsScreen),
+        DrawerItem("Purchases", Icons.Default.Inventory2, PurchaseScreen),
+        DrawerItem("Stocks", Icons.Default.ReceiptLong, StockScreen),
         DrawerItem("Settings", Icons.Default.Settings, SettingsScreen),
     )
 
