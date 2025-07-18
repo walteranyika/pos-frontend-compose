@@ -1,6 +1,7 @@
 package com.chui.pos.services
 
 import com.chui.pos.dtos.CreateSaleRequest
+import com.chui.pos.network.safeApiCallForUnit
 import io.ktor.client.HttpClient
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -14,16 +15,11 @@ class SaleService(private val httpClient: HttpClient) {
         private val logger = LoggerFactory.getLogger(SaleService::class.java)
     }
 
-    suspend fun createSale(request: CreateSaleRequest): Result<Unit> {
-        return try {
+    suspend fun createSale(request: CreateSaleRequest): Result<Unit> =
+        safeApiCallForUnit {
             httpClient.post(SALES_ENDPOINT) {
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }
-            Result.success(Unit)
-        } catch (e: Exception) {
-            logger.error("Failed to create sale: ${e.message}", e)
-            Result.failure(e)
-        }
-    }
+        }.onFailure { logger.error("Failed to create sale: ${it.message}", it) }
 }
