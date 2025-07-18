@@ -1,13 +1,13 @@
 package com.chui.pos.services
 
+import com.chui.pos.dtos.ErrorResponse
 import com.chui.pos.dtos.LoginRequest
 import com.chui.pos.dtos.LoginResponse
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
 import org.slf4j.LoggerFactory
 
 class LoginService(private val httpClient: HttpClient) {
@@ -20,14 +20,22 @@ class LoginService(private val httpClient: HttpClient) {
     suspend fun login(pin: String): Result<LoginResponse> {
         val body = LoginRequest(pin = pin, username = DEFAULT_USERNAME)
         return try {
-            val response: LoginResponse = httpClient.post(LOGIN_ENDPOINT) {
+            val response: HttpResponse = httpClient.post(LOGIN_ENDPOINT) {
                 contentType(ContentType.Application.Json)
                 setBody(body)
-            }.body()
-            Result.success(response)
-        } catch (e: Exception) {
+            }
+
+            if (response.status.isSuccess()) {
+                Result.success(response.body<LoginResponse>())
+            }else{
+                val errorResponse = response.body<ErrorResponse>()
+                logger.error("Login failed for user: $DEFAULT_USERNAME, Server says ${errorResponse.message} Code ${errorResponse.status}")
+                Result.failure(Exception(errorResponse.message))
+            }
+
+        } catch (e: Exception){
             logger.error("Login failed for user: $DEFAULT_USERNAME", e)
-            Result.failure(e)
+            Result.failure(Exception("Cannot connect to the server. Please check network connection"))
         }
     }
 }

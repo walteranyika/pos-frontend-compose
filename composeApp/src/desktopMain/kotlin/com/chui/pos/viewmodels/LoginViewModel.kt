@@ -46,7 +46,7 @@ class LoginViewModel(
                     loginState = LoginUiState.Idle
                     _events.emit(LoginEvent.NavigateToHome)
                 }.onFailure { error ->
-                    loginState = LoginUiState.Error("Invalid PIN or connection error.")
+                    loginState = LoginUiState.Error(error.message?:"Invalid PIN or connection error.")
                     pin = "" // Clear PIN on failure
                 }
             }

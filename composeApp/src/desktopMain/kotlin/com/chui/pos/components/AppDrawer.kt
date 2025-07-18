@@ -24,7 +24,7 @@ fun AppDrawerContent(
     // Define menu items in a structured way
     val mainScreens = listOf(
         DrawerItem("POS", Icons.Default.ShoppingCart, PosScreen),
-        DrawerItem("Reports", Icons.Default.Assessment, ReportsScreen),
+        DrawerItem("Sales Reports", Icons.Default.Assessment, ReportsScreen),
         )
 
     val managementScreens = listOf(
