@@ -35,7 +35,12 @@ fun main() {
         val scope = rememberCoroutineScope()
 
         Window(
-            onCloseRequest = ::exitApplication,
+            onCloseRequest = {
+                scope.launch {
+                    authManager.clearSession()
+                    exitApplication()
+                }
+            },
             title = "Point of Sale System",
             state = windowState
         ) {
