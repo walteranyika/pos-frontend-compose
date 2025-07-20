@@ -44,7 +44,7 @@ object PosScreen : Screen {
     @Composable
     override fun Content() {
         val viewModel = koinInject<PosViewModel>()
-        val saleSubmissionState  = viewModel.saleSubmissionState //FIX BY
+        val saleSubmissionState = viewModel.saleSubmissionState //FIX BY
         val actionMessage = viewModel.actionMessage
         val snackbarHostState = remember { SnackbarHostState() }
 
@@ -56,16 +56,19 @@ object PosScreen : Screen {
                     snackbarHostState.showSnackbar("Sale submitted successfully")
                     viewModel.resetSaleSubmissionState()
                 }
+
                 is SaleSubmissionState.Error -> {
                     println("Error submitting sale: ${saleSubmissionState.message}")
                     snackbarHostState.showSnackbar("Error submitting sale: ${saleSubmissionState.message}")
                     viewModel.resetSaleSubmissionState()
                 }
-                else -> { /* Do nothing for Idle or Loading states */ }
+
+                else -> { /* Do nothing for Idle or Loading states */
+                }
             }
         }
 
-        LaunchedEffect(actionMessage){
+        LaunchedEffect(actionMessage) {
             actionMessage?.let {
                 snackbarHostState.showSnackbar(it)
                 viewModel.onActionMessageShown()
@@ -73,7 +76,7 @@ object PosScreen : Screen {
         }
 
 
-        Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding->
+        Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
             Row(modifier = Modifier.fillMaxSize()) {
                 // Left Side: Cart (1 part of the screen width)
                 Box(modifier = Modifier.weight(1f).fillMaxHeight().padding(8.dp)) {
@@ -88,11 +91,11 @@ object PosScreen : Screen {
 
 
 
-        if(viewModel.showPaymentDialog){
+        if (viewModel.showPaymentDialog) {
             PaymentDialog(viewModel)
         }
 
-        if (viewModel.showHeldOrdersDialog){
+        if (viewModel.showHeldOrdersDialog) {
             HeldOrdersDialog(
                 heldOrders = viewModel.helOrders,
                 onDismiss = viewModel::hideHeldOrdersDialog,
@@ -154,28 +157,30 @@ private fun CartView(viewModel: PosViewModel) {
 
             Spacer(Modifier.height(16.dp))
 
-                Button(
-                    onClick = { viewModel.onOpenPaymentDialog() },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = cartItems.isNotEmpty(),
-                    shape = RoundedCornerShape(size = 0.dp)
-                ) {
-                    Text("Complete and Pay")
-                }
-
+            Button(
+                onClick = { viewModel.onOpenPaymentDialog() },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = cartItems.isNotEmpty(),
+                shape = RoundedCornerShape(size = 0.dp)
+            ) {
+                Text("Complete and Pay")
+            }
+            Spacer(Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
                     onClick = { viewModel.holdCurrentOrder() },
                     enabled = cartItems.isNotEmpty(),
-                    modifier = Modifier.weight(1f)
-                ){
-                    Text(if(activeHeldOrderId != null) "Update Held Order" else "Hold Order")
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(0.dp)
+                ) {
+                    Text(if (activeHeldOrderId != null) "Update Held Order" else "Hold Order")
                 }
 
                 OutlinedButton(
                     onClick = viewModel::showHeldOrdersDialog,
-                    modifier = Modifier.weight(1f)
-                ){
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(0.dp)
+                ) {
                     Text("View held orders")
                 }
             }
@@ -195,7 +200,12 @@ private fun CartItemRow(item: CartItem, onIncrement: () -> Unit, onDecrement: ()
         }
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            IconButton(onClick = onDecrement, modifier = Modifier.size(28.dp)) { Icon(Icons.Default.Remove, "Decrement") }
+            IconButton(onClick = onDecrement, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    Icons.Default.Remove,
+                    "Decrement"
+                )
+            }
             Text(item.quantity.toString(), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
             IconButton(onClick = onIncrement, modifier = Modifier.size(28.dp)) { Icon(Icons.Default.Add, "Increment") }
         }
@@ -229,7 +239,11 @@ fun PaymentDialog(viewModel: PosViewModel) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Total: %.2f".format(total), style = MaterialTheme.typography.titleLarge)
-                Text("Remaining: %.2f".format(remainingBalance), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    "Remaining: %.2f".format(remainingBalance),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 8.dp),
                     thickness = DividerDefaults.Thickness,
@@ -237,7 +251,10 @@ fun PaymentDialog(viewModel: PosViewModel) {
                 )
 
                 // Payment input
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     OutlinedTextField(
                         value = amountInput,
                         onValueChange = { amountInput = it },
@@ -268,13 +285,14 @@ fun PaymentDialog(viewModel: PosViewModel) {
                             }
                         }
                     }
-                    Button(onClick = {
-                        val amount = amountInput.toDoubleOrNull()
-                        if (amount != null && amount > 0) {
-                            viewModel.addPayment(PaymentRequest(amount, selectedMethod))
-                            amountInput = ""
-                        }
-                    },
+                    Button(
+                        onClick = {
+                            val amount = amountInput.toDoubleOrNull()
+                            if (amount != null && amount > 0) {
+                                viewModel.addPayment(PaymentRequest(amount, selectedMethod))
+                                amountInput = ""
+                            }
+                        },
                         enabled = remainingBalance > 0
                     ) { Text("Add") }
                 }
@@ -282,10 +300,18 @@ fun PaymentDialog(viewModel: PosViewModel) {
                 // List of added payments
                 LazyColumn {
                     items(payments) { payment ->
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Text("${payment.method.name}: %.2f".format(payment.amount))
                             IconButton(onClick = { viewModel.removePayment(payment) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Remove Payment", tint = MaterialTheme.colorScheme.error)
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "Remove Payment",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
                             }
                         }
                         HorizontalDivider()
@@ -450,7 +476,12 @@ private fun ProductGridItem(product: ProductResponse, onClick: () -> Unit) {
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(product.name, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, maxLines = 2)
+                Text(
+                    product.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2
+                )
                 Text(product.code, style = MaterialTheme.typography.bodySmall)
             }
             Text(
