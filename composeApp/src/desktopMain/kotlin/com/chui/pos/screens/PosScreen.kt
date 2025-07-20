@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
+import com.chui.pos.components.HeldOrdersDialog
 import com.chui.pos.dtos.CartItem
 import com.chui.pos.dtos.CategoryResponse
 import com.chui.pos.dtos.PaymentMethod
@@ -44,35 +45,60 @@ object PosScreen : Screen {
     override fun Content() {
         val viewModel = koinInject<PosViewModel>()
         val saleSubmissionState  = viewModel.saleSubmissionState //FIX BY
+        val actionMessage = viewModel.actionMessage
+        val snackbarHostState = remember { SnackbarHostState() }
+
 
         LaunchedEffect(saleSubmissionState) {
             when (saleSubmissionState) {
                 is SaleSubmissionState.Success -> {
                     println("Sale submitted successfully!")
+                    snackbarHostState.showSnackbar("Sale submitted successfully")
                     viewModel.resetSaleSubmissionState()
                 }
                 is SaleSubmissionState.Error -> {
                     println("Error submitting sale: ${saleSubmissionState.message}")
+                    snackbarHostState.showSnackbar("Error submitting sale: ${saleSubmissionState.message}")
                     viewModel.resetSaleSubmissionState()
                 }
                 else -> { /* Do nothing for Idle or Loading states */ }
             }
         }
 
-        Row(modifier = Modifier.fillMaxSize()) {
-            // Left Side: Cart (1 part of the screen width)
-            Box(modifier = Modifier.weight(1f).fillMaxHeight().padding(8.dp)) {
-                CartView(viewModel)
-            }
-
-            // Right Side: Product List (2 parts of the screen width)
-            Box(modifier = Modifier.weight(2f).fillMaxHeight().padding(8.dp)) {
-                ProductListView(viewModel)
+        LaunchedEffect(actionMessage){
+            actionMessage?.let {
+                snackbarHostState.showSnackbar(it)
+                viewModel.onActionMessageShown()
             }
         }
 
+
+        Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding->
+            Row(modifier = Modifier.fillMaxSize()) {
+                // Left Side: Cart (1 part of the screen width)
+                Box(modifier = Modifier.weight(1f).fillMaxHeight().padding(8.dp)) {
+                    CartView(viewModel)
+                }
+                // Right Side: Product List (2 parts of the screen width)
+                Box(modifier = Modifier.weight(2f).fillMaxHeight().padding(8.dp)) {
+                    ProductListView(viewModel)
+                }
+            }
+        }
+
+
+
         if(viewModel.showPaymentDialog){
             PaymentDialog(viewModel)
+        }
+
+        if (viewModel.showHeldOrdersDialog){
+            HeldOrdersDialog(
+                heldOrders = viewModel.helOrders,
+                onDismiss = viewModel::hideHeldOrdersDialog,
+                onResume = viewModel::resumeHeldOrder,
+                onDelete = viewModel::deleteHeldOrder
+            )
         }
 
     }
@@ -82,6 +108,7 @@ object PosScreen : Screen {
 private fun CartView(viewModel: PosViewModel) {
     val cartItems by viewModel.cartItems.collectAsState()
     val total by viewModel.cartTotal.collectAsState()
+    val activeHeldOrderId by remember { mutableStateOf(viewModel.activeHeldOrderId) }
 
     Surface(tonalElevation = 2.dp, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -135,6 +162,23 @@ private fun CartView(viewModel: PosViewModel) {
                 ) {
                     Text("Complete and Pay")
                 }
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = { viewModel.holdCurrentOrder() },
+                    enabled = cartItems.isNotEmpty(),
+                    modifier = Modifier.weight(1f)
+                ){
+                    Text(if(activeHeldOrderId != null) "Update Held Order" else "Hold Order")
+                }
+
+                OutlinedButton(
+                    onClick = viewModel::showHeldOrdersDialog,
+                    modifier = Modifier.weight(1f)
+                ){
+                    Text("View held orders")
+                }
+            }
         }
     }
 }

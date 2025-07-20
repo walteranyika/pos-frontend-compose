@@ -1,9 +1,10 @@
 package com.chui.pos.di
 
-import com.chui.pos.data.ApiConfig
 import com.chui.pos.managers.AuthManager
 import com.chui.pos.managers.SettingsManager
 import com.chui.pos.services.CategoryService
+import com.chui.pos.services.HealthService
+import com.chui.pos.services.HeldOrderService
 import com.chui.pos.services.LoginService
 import com.chui.pos.services.PrintingService
 import com.chui.pos.services.ProductService
@@ -18,6 +19,7 @@ import com.chui.pos.viewmodels.PosViewModel
 import com.chui.pos.viewmodels.ProductViewModel
 import com.chui.pos.viewmodels.PurchaseViewModel
 import com.chui.pos.viewmodels.ReportsViewModel
+import com.chui.pos.viewmodels.ServerStatusViewModel
 import com.chui.pos.viewmodels.SettingsViewModel
 import com.chui.pos.viewmodels.StockViewModel
 import com.chui.pos.viewmodels.UnitViewModel
@@ -63,6 +65,7 @@ val appModule = module {
         // Persistence Layer
         single { Settings() }
         single { SettingsManager() }
+
         single { AuthManager(get()) }
 
         // Services (now receive HttpClient via constructor)
@@ -76,10 +79,16 @@ val appModule = module {
         single { PrintingService(get()) }
         single { StockService(get()) }
         single { PurchaseService(get()) }
+        single { HealthService(get()) }
+        single { ServerStatusViewModel(get()) }
+        single { HeldOrderService(get()) }
+
+
+
 
         // ViewModels
         factory { LoginViewModel(get(), get()) }
-        factory { PosViewModel(get(), get(), get(), get()) }
+        factory { PosViewModel(get(), get(), get(), get(), get()) }
         factory { UnitViewModel(get() ) }
         factory { ReportsViewModel(get() ) }
         factory { CategoryViewModel(get() ) }
@@ -87,6 +96,7 @@ val appModule = module {
         factory { SettingsViewModel(get(), get()) }
         factory { StockViewModel(get(), get()) }
         factory { PurchaseViewModel(get(), get()) }
+
     } catch (e: Exception) {
         TODO("Not yet implemented")
     } finally {

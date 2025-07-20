@@ -10,10 +10,14 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import com.chui.pos.dtos.CartItem
 import com.chui.pos.dtos.CreateSaleRequest
 import com.chui.pos.dtos.CategoryResponse
+import com.chui.pos.dtos.HeldOrderResponse
+import com.chui.pos.dtos.HoldOrderItemRequest
+import com.chui.pos.dtos.HoldOrderRequest
 import com.chui.pos.dtos.PaymentRequest
 import com.chui.pos.dtos.ProductResponse
 import com.chui.pos.dtos.SaleItemRequest
 import com.chui.pos.services.CategoryService
+import com.chui.pos.services.HeldOrderService
 import com.chui.pos.services.PrintingService
 import com.chui.pos.services.ProductService
 import com.chui.pos.services.SaleService
@@ -50,7 +54,8 @@ class PosViewModel(
     private val productService: ProductService,
     private val saleService: SaleService,
     private val categoryService: CategoryService,
-    private val printingService: PrintingService
+    private val printingService: PrintingService,
+    private val heldOrderService: HeldOrderService,
 ) : ScreenModel {
 
     private val _uiState = mutableStateOf<PosUiState>(PosUiState.Loading)
@@ -86,6 +91,17 @@ class PosViewModel(
     var printReceipt by mutableStateOf(true) // Default to true
         private set
 
+    var showHeldOrdersDialog by mutableStateOf(false)
+        private set
+    var helOrders by mutableStateOf<List<HeldOrderResponse>>(emptyList())
+        private set
+    var activeHeldOrderId by mutableStateOf<Long?>(null)
+        private set
+    var actionMessage by mutableStateOf<String?>(null)
+        private set
+
+
+
 
     init {
         fetchProductsAndCategories()
@@ -98,6 +114,12 @@ class PosViewModel(
     fun onDismissPaymentDialog() {
         showPaymentDialog = false
     }
+
+    fun onActionMessageShown(){
+        actionMessage = null
+    }
+
+
 
 
     private fun fetchProductsAndCategories() {
@@ -126,9 +148,6 @@ class PosViewModel(
         if (currentState !is ProductsUiState.Success) return
 
         selectedCategoryId = categoryId
-
-        // To provide immediate feedback, we could show a loading overlay on the grid.
-        // For now, let's just update the list by fetching new products.
         screenModelScope.launch {
             val productsResult = if (categoryId == null) {
                 productService.getProducts()
@@ -189,9 +208,7 @@ class PosViewModel(
             saleService.createSale(saleRequest)
                 .onSuccess {
                     saleSubmissionState = SaleSubmissionState.Success
-                    _cartItems.value = emptyMap()
-                    _payments.value = emptyList()
-                    recalculateTotal(emptyMap())
+                    clearCart()
                     showPaymentDialog = false
                     if (printReceipt) {
                         //printingService.printReceipt(saleResponse)
@@ -253,6 +270,89 @@ class PosViewModel(
             mutableCart
         }
     }
+
+    fun holdCurrentOrder() {
+       if (_cartItems.value.isEmpty()){
+           actionMessage = "No items in cart"
+           return
+       }
+        val request = HoldOrderRequest(
+            items = _cartItems.value.values.map {
+                HoldOrderItemRequest(
+                    productId = it.productId,
+                    quantity = it.quantity.toDouble()
+                )
+            }
+        )
+
+        screenModelScope.launch {
+            val result = if (activeHeldOrderId == null){
+                heldOrderService.holdOrder(request)
+            } else {
+                heldOrderService.updateHeldOrder(activeHeldOrderId!!, request)
+            }
+
+            result.onSuccess {
+                clearCart()
+                actionMessage = "Order held successfully"
+            }.onFailure {
+                actionMessage = "Error holding order"
+            }
+        }
+
+    }
+
+    fun showHeldOrdersDialog(){
+        showHeldOrdersDialog = true
+        loadHeldOrders()
+    }
+
+    fun hideHeldOrdersDialog(){
+        showHeldOrdersDialog = false
+    }
+
+    private fun loadHeldOrders(){
+        screenModelScope.launch {
+          heldOrderService.getHeldOrders().onSuccess {
+              helOrders = it
+          }
+        }
+    }
+
+    fun clearCart(clearHeldContext: Boolean = true) {
+        _cartItems.value = emptyMap()
+        _payments.value = emptyList()
+        recalculateTotal(emptyMap())
+        if (clearHeldContext) {
+            activeHeldOrderId = null
+        }
+    }
+
+    fun resumeHeldOrder(heldOrder: HeldOrderResponse){
+//        clearCart(clearHeldContext = false)
+        val resumeCartItems = heldOrder.items.associate {
+            it.productId to CartItem(
+                productId = it.productId,
+                name = it.productName,
+                price = it.price,
+                quantity = it.quantity.toInt()
+            )
+        }
+        _cartItems.value = resumeCartItems
+        recalculateTotal(resumeCartItems)
+        activeHeldOrderId = heldOrder.id
+        showHeldOrdersDialog = false
+        actionMessage = "Order Resumed ${heldOrder.id}"
+    }
+
+    fun deleteHeldOrder(orderId: Long){
+        screenModelScope.launch {
+            heldOrderService.deleteHeldOrder(orderId)
+            loadHeldOrders()
+        }
+    }
+
+
 
     private fun updateItemQuantity(productId: Int, delta: Int) {
         _cartItems.update { currentCart ->

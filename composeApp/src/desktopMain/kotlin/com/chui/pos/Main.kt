@@ -12,9 +12,11 @@ import androidx.compose.ui.window.*
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.transitions.SlideTransition
 import com.chui.pos.components.AppDrawerContent
+import com.chui.pos.components.ServerStatusIndicator
 import com.chui.pos.di.appModule
 import com.chui.pos.managers.AuthManager
 import com.chui.pos.screens.LoginScreen
+import com.chui.pos.viewmodels.ServerStatusViewModel
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.core.context.startKoin
@@ -29,10 +31,12 @@ fun main() {
     application {
         var navigator: Navigator? by remember { mutableStateOf(null) }
         val authManager = koinInject<AuthManager>()
+        val serverStatusViewModel = koinInject<ServerStatusViewModel>()
         val isLoggedIn by authManager.isLoggedInState.collectAsState()
         val windowState = rememberWindowState(placement = WindowPlacement.Maximized)
         val drawerState = rememberDrawerState(DrawerValue.Closed)
         val scope = rememberCoroutineScope()
+        val isServerOnline by serverStatusViewModel.isServerOnline.collectAsState()
 
         Window(
             onCloseRequest = {
@@ -70,6 +74,11 @@ fun main() {
                                                 }
                                             }
                                         )
+                                    },
+                                    bottomBar = {
+                                        BottomAppBar {
+                                            ServerStatusIndicator(isServerOnline)
+                                        }
                                     }
                                 ) { padding ->
                                     Box(modifier = Modifier.padding(padding)) {
