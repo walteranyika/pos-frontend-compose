@@ -39,8 +39,9 @@ class LoginViewModel(
                 result.onSuccess { response ->
                     authManager.saveSession(
                         token = response.token,
-                        firstName = response.firstName,
-                        lastName = response.lastName
+                        fullName = response.fullName,
+                        username = response.username,
+                        permissions = response.permissions
                     )
                     // Reset the UI state and send a one-time event to navigate
                     loginState = LoginUiState.Idle

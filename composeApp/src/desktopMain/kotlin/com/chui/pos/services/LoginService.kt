@@ -11,7 +11,7 @@ import io.ktor.http.*
 class LoginService(private val httpClient: HttpClient) {
     companion object {
         private const val LOGIN_ENDPOINT = "auth/login"
-        private const val DEFAULT_USERNAME = "cashier01"
+        private const val DEFAULT_USERNAME = "admin"
         private val logger = KotlinLogging.logger {  }
     }
 

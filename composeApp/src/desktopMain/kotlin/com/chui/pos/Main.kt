@@ -37,7 +37,7 @@ fun main() {
         val drawerState = rememberDrawerState(DrawerValue.Closed)
         val scope = rememberCoroutineScope()
         val isServerOnline by serverStatusViewModel.isServerOnline.collectAsState()
-
+//    if (authManager.hasPermission("MANAGE_USERS")) {
         Window(
             onCloseRequest = {
                 scope.launch {
