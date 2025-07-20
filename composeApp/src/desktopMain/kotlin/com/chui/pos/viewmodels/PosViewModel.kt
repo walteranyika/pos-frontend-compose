@@ -21,6 +21,7 @@ import com.chui.pos.services.HeldOrderService
 import com.chui.pos.services.PrintingService
 import com.chui.pos.services.ProductService
 import com.chui.pos.services.SaleService
+import com.chui.pos.services.SoundService
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,6 +57,7 @@ class PosViewModel(
     private val categoryService: CategoryService,
     private val printingService: PrintingService,
     private val heldOrderService: HeldOrderService,
+    private val soundService: SoundService,
 ) : ScreenModel {
 
     private val _uiState = mutableStateOf<PosUiState>(PosUiState.Loading)
@@ -178,6 +180,7 @@ class PosViewModel(
             recalculateTotal(mutableCart)
             mutableCart
         }
+        soundService.playAddToCartSound()
     }
 
     fun addPayment(payment: PaymentRequest) {
@@ -256,10 +259,12 @@ class PosViewModel(
 
     fun incrementQuantity(productId: Int) {
         updateItemQuantity(productId, 1)
+        soundService.playAddToCartSound()
     }
 
     fun decrementQuantity(productId: Int) {
         updateItemQuantity(productId, -1)
+        soundService.playAddToCartSound()
     }
 
     fun removeItem(productId: Int) {

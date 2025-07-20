@@ -11,6 +11,7 @@ import com.chui.pos.services.ProductService
 import com.chui.pos.services.PurchaseService
 import com.chui.pos.services.ReportService
 import com.chui.pos.services.SaleService
+import com.chui.pos.services.SoundService
 import com.chui.pos.services.StockService
 import com.chui.pos.services.UnitService
 import com.chui.pos.viewmodels.CategoryViewModel
@@ -82,13 +83,14 @@ val appModule = module {
         single { HealthService(get()) }
         single { ServerStatusViewModel(get()) }
         single { HeldOrderService(get()) }
+        single { SoundService() }
 
 
 
 
         // ViewModels
         factory { LoginViewModel(get(), get()) }
-        factory { PosViewModel(get(), get(), get(), get(), get()) }
+        factory { PosViewModel(get(), get(), get(), get(), get(), get()) }
         factory { UnitViewModel(get() ) }
         factory { ReportsViewModel(get() ) }
         factory { CategoryViewModel(get() ) }
