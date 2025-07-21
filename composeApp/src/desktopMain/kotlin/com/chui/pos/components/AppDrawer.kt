@@ -36,6 +36,7 @@ fun AppDrawerContent(
         DrawerItem("Units", Icons.Default.SquareFoot, UnitsScreen, PermissionEnum.MANAGE_UNITS.name),
         DrawerItem("Purchases", Icons.Default.Inventory2, PurchaseScreen, PermissionEnum.MANAGE_STOCK.name),
         DrawerItem("Stocks", Icons.Default.ReceiptLong, StockScreen,PermissionEnum.MANAGE_STOCK.name),
+        DrawerItem("Users", Icons.Default.People, UsersScreen, PermissionEnum.MANAGE_USERS.name), // Add this line
         DrawerItem("Settings", Icons.Default.Settings, SettingsScreen),
     )
 

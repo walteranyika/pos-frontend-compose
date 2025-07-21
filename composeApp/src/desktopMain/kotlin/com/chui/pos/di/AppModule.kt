@@ -14,6 +14,7 @@ import com.chui.pos.services.SaleService
 import com.chui.pos.services.SoundService
 import com.chui.pos.services.StockService
 import com.chui.pos.services.UnitService
+import com.chui.pos.services.UserService
 import com.chui.pos.viewmodels.CategoryViewModel
 import com.chui.pos.viewmodels.LoginViewModel
 import com.chui.pos.viewmodels.PosViewModel
@@ -24,6 +25,7 @@ import com.chui.pos.viewmodels.ServerStatusViewModel
 import com.chui.pos.viewmodels.SettingsViewModel
 import com.chui.pos.viewmodels.StockViewModel
 import com.chui.pos.viewmodels.UnitViewModel
+import com.chui.pos.viewmodels.UserViewModel
 import com.russhwolf.settings.Settings
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
@@ -84,6 +86,7 @@ val appModule = module {
         single { ServerStatusViewModel(get()) }
         single { HeldOrderService(get()) }
         single { SoundService() }
+        single { UserService(get()) } // Add this line
 
 
 
@@ -95,6 +98,7 @@ val appModule = module {
         factory { ReportsViewModel(get() ) }
         factory { CategoryViewModel(get() ) }
         factory { ProductViewModel(get(), get(), get()) }
+        factory { UserViewModel(get()) } // Add this line
         factory { SettingsViewModel(get(), get()) }
         factory { StockViewModel(get(), get()) }
         factory { PurchaseViewModel(get(), get()) }
