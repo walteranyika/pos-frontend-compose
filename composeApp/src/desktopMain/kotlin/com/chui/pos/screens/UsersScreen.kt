@@ -1,9 +1,13 @@
 package com.chui.pos.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -11,21 +15,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import cafe.adriel.voyager.core.screen.Screen
-import com.chui.pos.dtos.RoleResponse
 import com.chui.pos.dtos.UserResponse
 import com.chui.pos.viewmodels.UserViewModel
 import org.koin.compose.koinInject
 
 object UsersScreen : Screen {
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val viewModel: UserViewModel = koinInject()
         val state = viewModel.uiState
         val snackbarHostState = remember { SnackbarHostState() }
 
+        // Show feedback messages from the ViewModel
         LaunchedEffect(state.actionMessage) {
             state.actionMessage?.let {
                 snackbarHostState.showSnackbar(it)
@@ -33,37 +38,28 @@ object UsersScreen : Screen {
             }
         }
 
+        // Handle the Reset PIN Dialog
+        if (state.isResetPinDialogVisible && state.selectedUser != null) {
+            ResetPinDialog(
+                user = state.selectedUser,
+                onDismiss = viewModel::hideDialogs,
+                onConfirm = viewModel::resetPin
+            )
+        }
+
         Scaffold(
+            topBar = { TopAppBar(title = { Text("Manage Users") }) },
             snackbarHost = { SnackbarHost(snackbarHostState) }
         ) { padding ->
-            Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-                if (state.isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                } else if (state.error != null) {
-                    Text("Error: ${state.error}", color = MaterialTheme.colorScheme.error, modifier = Modifier.align(Alignment.Center))
-                } else {
-                    UserList(
-                        users = state.users,
-                        onEditClick = viewModel::showEditDialog,
-                        onResetPinClick = viewModel::showResetPinDialog
-                    )
+            Row(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
+                // Left Panel: Form for Add/Edit
+                Card(modifier = Modifier.weight(1.5f).padding(end = 8.dp)) {
+                    UserForm(viewModel)
                 }
 
-                if (state.isEditDialogVisible && state.selectedUser != null) {
-                    EditUserDialog(
-                        user = state.selectedUser,
-                        allRoles = state.roles,
-                        onDismiss = viewModel::hideDialogs,
-                        onConfirm = viewModel::updateUser
-                    )
-                }
-
-                if (state.isResetPinDialogVisible && state.selectedUser != null) {
-                    ResetPinDialog(
-                        user = state.selectedUser,
-                        onDismiss = viewModel::hideDialogs,
-                        onConfirm = viewModel::resetPin
-                    )
+                // Right Panel: List of Users
+                Card(modifier = Modifier.weight(2f).padding(start = 8.dp)) {
+                    UserList(viewModel)
                 }
             }
         }
@@ -71,97 +67,125 @@ object UsersScreen : Screen {
 }
 
 @Composable
-private fun UserList(
-    users: List<UserResponse>,
-    onEditClick: (UserResponse) -> Unit,
-    onResetPinClick: (UserResponse) -> Unit
-) {
+private fun UserForm(viewModel: UserViewModel) {
+    val formState = viewModel.formState
+    val allRoles = viewModel.uiState.roles
+    var pinVisible by remember { mutableStateOf(false) }
+
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(users, key = { it.id }) { user ->
-            Card(elevation = CardDefaults.cardElevation(2.dp)) {
-                ListItem(
-                    headlineContent = { Text(user.fullName ?: "No Name", fontWeight = FontWeight.Bold) },
-                    supportingContent = { Text("@${user.username} | Roles: ${user.roles.joinToString(", ")}") },
-                    trailingContent = {
-                        Row {
-                            TextButton(onClick = { onEditClick(user) }) {
-                                Text("Edit")
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            TextButton(onClick = { onResetPinClick(user) }) {
-                                Text("Reset PIN")
-                            }
-                        }
+        item {
+            Text(
+                text = if (viewModel.isEditing) "Edit User" else "Add New User",
+                style = MaterialTheme.typography.headlineSmall
+            )
+            HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
+        }
+
+        item {
+            OutlinedTextField(
+                value = formState.fullName,
+                onValueChange = { viewModel.onFormChange(formState.copy(fullName = it)) },
+                label = { Text("Full Name") },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        item {
+            OutlinedTextField(
+                value = formState.username,
+                onValueChange = { viewModel.onFormChange(formState.copy(username = it)) },
+                label = { Text("Username") },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        // PIN fields are only shown when creating a new user
+        if (!viewModel.isEditing) {
+            item {
+                OutlinedTextField(
+                    value = formState.pin,
+                    onValueChange = { viewModel.onFormChange(formState.copy(pin = it)) },
+                    label = { Text("4-Digit PIN") },
+                    modifier = Modifier.fillMaxWidth(),
+                    visualTransformation = if (pinVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    trailingIcon = {
+                        val image = if (pinVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                        IconButton(onClick = { pinVisible = !pinVisible }) { Icon(image, "Toggle PIN visibility") }
                     }
                 )
             }
         }
+
+        item {
+            Text("Roles", style = MaterialTheme.typography.titleMedium)
+            HorizontalDivider(modifier = Modifier.padding(top = 4.dp))
+        }
+
+        // Role selection checkboxes
+        items(allRoles) { role ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().clickable { viewModel.toggleRoleSelection(role.id) }
+            ) {
+                Checkbox(
+                    checked = role.id in formState.assignedRoleIds,
+                    onCheckedChange = { viewModel.toggleRoleSelection(role.id) }
+                )
+                Text(role.name, modifier = Modifier.padding(start = 8.dp))
+            }
+        }
+
+        item { Spacer(Modifier.height(16.dp)) }
+
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(onClick = viewModel::saveUser) {
+                    Text(if (viewModel.isEditing) "Update User" else "Save User")
+                }
+                Spacer(Modifier.weight(1f))
+                if (viewModel.isEditing) {
+                    OutlinedButton(onClick = viewModel::clearSelection) { Text("New") }
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun EditUserDialog(
-    user: UserResponse,
-    allRoles: List<RoleResponse>,
-    onDismiss: () -> Unit,
-    onConfirm: (fullName: String, username: String, assignedRoleIds: Set<Long>) -> Unit
-) {
-    var fullName by remember { mutableStateOf(user.fullName ?: "") }
-    var username by remember { mutableStateOf(user.username) }
-    val assignedRoleNames = remember { user.roles.toMutableStateList() }
+private fun UserList(viewModel: UserViewModel) {
+    val state = viewModel.uiState
 
-    Dialog(onDismissRequest = onDismiss) {
-        Card(modifier = Modifier.width(500.dp)) {
-            Column(modifier = Modifier.padding(24.dp)) {
-                Text("Edit User: @${user.username}", style = MaterialTheme.typography.headlineSmall)
-                Spacer(Modifier.height(16.dp))
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        // You can add a search bar here if needed, similar to ProductsScreen
+        // ...
 
-                OutlinedTextField(
-                    value = fullName,
-                    onValueChange = { fullName = it },
-                    label = { Text("Full Name") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = username,
-                    onValueChange = { username = it },
-                    label = { Text("Username") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(16.dp))
-                Text("Roles", style = MaterialTheme.typography.titleMedium)
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        Spacer(Modifier.height(8.dp))
 
-                // Role selection checkboxes
-                allRoles.forEach { role ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Checkbox(
-                            checked = role.name in assignedRoleNames,
-                            onCheckedChange = { isChecked ->
-                                if (isChecked) assignedRoleNames.add(role.name) else assignedRoleNames.remove(role.name)
+        when {
+            state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            state.error != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(state.error, color = MaterialTheme.colorScheme.error) }
+            else -> {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(state.users, key = { it.id }) { user ->
+                        ListItem(
+                            headlineContent = { Text(user.fullName ?: "No Name", fontWeight = FontWeight.Bold) },
+                            supportingContent = { Text("@${user.username}") },
+                            overlineContent = { Text("Roles: ${user.roles.joinToString(", ")}") },
+                            modifier = Modifier.clickable { viewModel.onUserSelected(user) },
+                            trailingContent = {
+                                TextButton(onClick = { viewModel.showResetPinDialog(user) }) {
+                                    Text("Reset PIN")
+                                }
                             }
                         )
-                        Text(role.name)
-                    }
-                }
-
-                Spacer(Modifier.height(24.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
-                    Spacer(Modifier.width(8.dp))
-                    Button(onClick = {
-                        val assignedIds = allRoles.filter { it.name in assignedRoleNames }.map { it.id }.toSet()
-                        onConfirm(fullName, username, assignedIds)
-                    }) {
-                        Text("Save Changes")
+                        HorizontalDivider()
                     }
                 }
             }
@@ -184,7 +208,7 @@ private fun ResetPinDialog(
             OutlinedTextField(
                 value = newPin,
                 onValueChange = { newPin = it },
-                label = { Text("New 6-Digit PIN") },
+                label = { Text("New 4-Digit PIN") },
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                 singleLine = true
@@ -195,7 +219,7 @@ private fun ResetPinDialog(
                 onClick = { onConfirm(newPin) },
                 enabled = newPin.length == 6 && newPin.all { it.isDigit() }
             ) {
-                Text("Confirm")
+                Text("Confirm Reset")
             }
         },
         dismissButton = {

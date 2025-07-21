@@ -44,4 +44,12 @@ class UserService(private val httpClient: HttpClient) {
             setBody(request)
         }
     }
+
+    suspend fun createUser(request: CreateUserRequest): Result<UserResponse> = safeApiCall {
+        httpClient.post(USERS_ENDPOINT) {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+    }
+
 }

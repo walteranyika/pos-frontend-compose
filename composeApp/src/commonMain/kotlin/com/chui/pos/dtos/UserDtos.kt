@@ -37,3 +37,11 @@ data class AssignRolesRequest(
 data class ResetPinRequest(
     val newPin: String
 )
+
+@Serializable
+data class CreateUserRequest(
+    val username: String,
+    val fullName: String?,
+    val password: String, // This will be the PIN
+    val roleIds: Set<Long> = emptySet()
+)
