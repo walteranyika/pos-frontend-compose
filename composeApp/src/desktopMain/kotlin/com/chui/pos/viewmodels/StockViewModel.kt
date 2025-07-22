@@ -1,5 +1,6 @@
 package com.chui.pos.viewmodels
 
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -13,6 +14,7 @@ import kotlinx.coroutines.launch
 
 data class StockUiState(
     val products: List<ProductResponse> = emptyList(),
+    val searchQuery: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
     val selectedProduct: ProductResponse? = null,
@@ -58,6 +60,23 @@ class StockViewModel(
             newQuantity = value
         }
     }
+    // In StockViewModel class
+    fun onSearchQueryChanged(query: String) {
+        uiState = uiState.copy(searchQuery = query)
+    }
+
+    // In StockViewModel class
+    val filteredProducts by derivedStateOf {
+        if (uiState.searchQuery.isBlank()) {
+            uiState.products
+        } else {
+            val query = uiState.searchQuery.trim()
+            uiState.products.filter { product ->
+                product.name.contains(query, ignoreCase = true) ||
+                        product.code.contains(query, ignoreCase = true)
+            }
+        }
+    }
 
     fun adjustStock() {
         val product = uiState.selectedProduct ?: return
@@ -69,6 +88,7 @@ class StockViewModel(
             stockService.adjustStock(request)
                 .onSuccess {
                     uiState = uiState.copy(isLoading = false, adjustmentMessage = "Stock updated successfully!")
+                    uiState = uiState.copy(selectedProduct = null)
                     loadProducts() // Refresh the list
                 }
                 .onFailure { error ->

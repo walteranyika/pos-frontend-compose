@@ -5,8 +5,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -46,39 +48,6 @@ object StockScreen : Screen {
             }
         ) { padding ->
             Row(Modifier.fillMaxSize().padding(padding)) {
-                // Product List Pane
-                Box(modifier = Modifier.weight(1f)) {
-                    if (state.isLoading && state.products.isEmpty()) {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                    } else if (state.error != null) {
-                        Text(
-                            "Error: ${state.error}",
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    } else {
-                        LazyColumn(modifier = Modifier.fillMaxSize()) {
-                            items(state.products, key = { it.id }) { product ->
-                                ListItem(
-                                    headlineContent = { Text(product.name) },
-                                    supportingContent = { Text("Code: ${product.code}") },
-                                    trailingContent = {
-                                        Text(
-                                            "${product.quantity} ${product.saleUnit.name}",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    },
-                                    modifier = Modifier.clickable { viewModel.onProductSelected(product) }
-                                )
-                                HorizontalDivider()
-                            }
-                        }
-                    }
-                }
-
-                // Adjustment Pane
-                VerticalDivider()
                 Box(modifier = Modifier.weight(1f).padding(16.dp)) {
                     state.selectedProduct?.let { product ->
                         Column(
@@ -99,7 +68,8 @@ object StockScreen : Screen {
                             Button(
                                 onClick = viewModel::adjustStock,
                                 enabled = !state.isLoading,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(0.dp)
                             ) {
                                 Text("Update Stock")
                             }
@@ -107,10 +77,59 @@ object StockScreen : Screen {
                     } ?: run {
                         Text(
                             "Select a product from the list to adjust its stock.",
+                            style = MaterialTheme.typography.headlineMedium,
                             modifier = Modifier.align(Alignment.Center)
                         )
                     }
                 }
+                VerticalDivider()
+                // Product List Pane
+                Column(modifier = Modifier.weight(2f).padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    // --- Search Bar Added Here ---
+                    OutlinedTextField(
+                        value = state.searchQuery,
+                        onValueChange = viewModel::onSearchQueryChanged,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        label = { Text("Search Products...") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search Icon") },
+                        singleLine = true
+                    )
+
+                    if (state.isLoading && state.products.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                        }
+                    } else if (state.error != null) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            Text(
+                                "Error: ${state.error}",
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.align(Alignment.Center)
+                            )
+                        }
+                    } else {
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            // --- Use the new filteredProducts list ---
+                            items(viewModel.filteredProducts, key = { it.id }) { product ->
+                                ListItem(
+                                    headlineContent = { Text(product.name) },
+                                    supportingContent = { Text("Code: ${product.code}") },
+                                    trailingContent = {
+                                        Text(
+                                            "${product.quantity} ${product.saleUnit.name}",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    },
+                                    modifier = Modifier.clickable { viewModel.onProductSelected(product) }
+                                )
+                                HorizontalDivider()
+                            }
+                        }
+                    }
+                }
+
+                // Adjustment Pane
             }
         }
     }
