@@ -53,7 +53,7 @@ object UsersScreen : Screen {
         ) { padding ->
             Row(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
                 // Left Panel: Form for Add/Edit
-                Card(modifier = Modifier.weight(1.5f).padding(end = 8.dp)) {
+                Card(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                     UserForm(viewModel)
                 }
 
