@@ -1,6 +1,7 @@
 package com.chui.pos.viewmodels
 
 
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -15,7 +16,9 @@ data class PurchaseUiState(
     val purchases: List<PurchaseResponse> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
-    val isCreateDialogVisible: Boolean = false
+    val isCreateDialogVisible: Boolean = false,
+    val selectedPurchase: PurchaseResponse? = null,
+    val searchQuery: String = "" // Add this property
 )
 
 data class CreatePurchaseState(
@@ -80,6 +83,25 @@ class PurchaseViewModel(
         }
     }
 
+    // 2. Add a function to handle search input
+//    fun onSearchQueryChanged(query: String) {
+//        uiState = uiState.copy(searchQuery = query)
+//    }
+
+    // 3. Create a derived state for the filtered list
+    val filteredPurchases by derivedStateOf {
+        if (uiState.searchQuery.isBlank()) {
+            uiState.purchases
+        } else {
+            val query = uiState.searchQuery.trim()
+            uiState.purchases.filter { purchase ->
+                // Search by reference number or supplier name
+                purchase.ref.contains(query, ignoreCase = true) ||
+                        (purchase.supplier?.contains(query, ignoreCase = true) == true)
+            }
+        }
+    }
+
     fun addProductToPurchase(product: ProductResponse) {
         val existingItem = createPurchaseState.items.find { it.productId == product.id }
         if (existingItem == null) {
@@ -114,6 +136,11 @@ class PurchaseViewModel(
             }
         }
         createPurchaseState = createPurchaseState.copy(items = updatedItems)
+    }
+
+    // In your PurchaseViewModel class
+    fun onPurchaseSelected(purchase: PurchaseResponse) {
+        uiState = uiState.copy(selectedPurchase = purchase)
     }
 
     fun submitPurchase() {

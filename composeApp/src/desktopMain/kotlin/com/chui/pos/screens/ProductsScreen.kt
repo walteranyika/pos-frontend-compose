@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,7 +30,13 @@ object ProductsScreen : Screen {
         val uiState = viewModel.uiState
 
         Scaffold(
-            topBar = { TopAppBar(title = { Text("Manage Products") }) }
+            topBar = { TopAppBar(title = { Text("Manage Products") },
+                /*actions = {
+                    IconButton(onClick = viewModel::) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                    }
+                }*/
+                ) }
         ) { padding ->
             Row(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
                 if (viewModel.showDeleteConfirmDialog) {
