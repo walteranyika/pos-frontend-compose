@@ -20,6 +20,7 @@ import com.chui.pos.viewmodels.LoginViewModel
 import com.chui.pos.viewmodels.PosViewModel
 import com.chui.pos.viewmodels.ProductViewModel
 import com.chui.pos.viewmodels.PurchaseViewModel
+import com.chui.pos.viewmodels.ReorderViewModel
 import com.chui.pos.viewmodels.ReportsViewModel
 import com.chui.pos.viewmodels.ServerStatusViewModel
 import com.chui.pos.viewmodels.SettingsViewModel
@@ -86,7 +87,7 @@ val appModule = module {
         single { ServerStatusViewModel(get()) }
         single { HeldOrderService(get()) }
         single { SoundService() }
-        single { UserService(get()) } // Add this line
+        single { UserService(get()) }
 
 
 
@@ -98,10 +99,11 @@ val appModule = module {
         factory { ReportsViewModel(get() ) }
         factory { CategoryViewModel(get() ) }
         factory { ProductViewModel(get(), get(), get()) }
-        factory { UserViewModel(get()) } // Add this line
+        factory { UserViewModel(get()) }
         factory { SettingsViewModel(get(), get()) }
         factory { StockViewModel(get(), get()) }
         factory { PurchaseViewModel(get(), get()) }
+        factory { ReorderViewModel(get()) }
 
     } catch (e: Exception) {
         TODO("Not yet implemented")

@@ -37,6 +37,7 @@ fun main() {
         val drawerState = rememberDrawerState(DrawerValue.Closed)
         val scope = rememberCoroutineScope()
         val isServerOnline by serverStatusViewModel.isServerOnline.collectAsState()
+        val user by remember { mutableStateOf(authManager.getUserFullName()) }
 //    if (authManager.hasPermission("MANAGE_USERS")) {
         Window(
             onCloseRequest = {
@@ -77,7 +78,7 @@ fun main() {
                                     },
                                     bottomBar = {
                                         BottomAppBar {
-                                            ServerStatusIndicator(isServerOnline)
+                                            ServerStatusIndicator(isServerOnline, user)
                                         }
                                     }
                                 ) { padding ->

@@ -24,13 +24,11 @@ import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
 
-// Helper to format currency
 private fun formatCurrency(value: Double): String {
     val kenyaLocale = Locale("en", "KE") // "en" for English, "KE" for Kenya
     return NumberFormat.getCurrencyInstance(kenyaLocale).format(value)
 }
 
-// Helper to format date string
 private fun formatDate(dateString: String?): String {
     if (dateString == null) return "N/A"
     return try {

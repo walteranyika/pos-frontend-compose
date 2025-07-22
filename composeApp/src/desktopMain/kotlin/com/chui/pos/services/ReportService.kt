@@ -1,6 +1,7 @@
 package com.chui.pos.services
 
 import com.chui.pos.dtos.PagedResponse
+import com.chui.pos.dtos.ReorderItemResponse
 import com.chui.pos.dtos.SaleSummaryResponse
 import com.chui.pos.network.safeApiCall
 import io.ktor.client.*
@@ -12,6 +13,7 @@ import java.time.LocalDate
 class ReportService(private val httpClient: HttpClient) {
     companion object{
         private const val  REPORTS_ENDPOINT = "services/sales/recent"
+        private const val  STOCK_LEVEL_ENDPOINT = "services/reorder-alerts"
         private val logger = LoggerFactory.getLogger(ReportService::class.java)
     }
 
@@ -33,4 +35,9 @@ class ReportService(private val httpClient: HttpClient) {
                 }
             }
         }.onFailure { logger.error("Failed to fetch recent sales", it) }
+
+
+    suspend fun getReorderAlerts(): Result<List<ReorderItemResponse>> = safeApiCall<List<ReorderItemResponse>> {
+        httpClient.get(STOCK_LEVEL_ENDPOINT)
+    }.onFailure { logger.error("Failed to fetch stock level alerts", it) }
 }
