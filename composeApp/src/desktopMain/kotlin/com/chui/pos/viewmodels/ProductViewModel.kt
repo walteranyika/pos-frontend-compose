@@ -14,6 +14,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.io.File
 
 data class ProductFormData(
     val name: String = "",
@@ -30,6 +31,16 @@ data class ProductFormData(
     val isActive: Boolean = true,
     val note: String? = null
 )
+
+// Add this new state data class
+data class BulkImportState(
+    val isDialogVisible: Boolean = false,
+    val selectedFile: File? = null,
+    val validationResult: ImportValidationResult = ImportValidationResult.Idle,
+    val isImporting: Boolean = false,
+    val importResponse: BulkImportResponse? = null
+)
+
 
 sealed interface ProductsOnlyUiState {
     object Loading : ProductsOnlyUiState
@@ -67,6 +78,11 @@ class ProductViewModel(
         private set
     var searchResults by mutableStateOf<List<ProductResponse>>(emptyList())
         private set
+
+    // Add the new state for the import dialog
+    var bulkImportState by mutableStateOf(BulkImportState())
+        private set
+
     private var searchJob: Job? = null
 
     init {
@@ -177,6 +193,72 @@ class ProductViewModel(
         searchQuery = ""
         searchResults = emptyList()
         searchJob?.cancel()
+    }
+
+    // --- Bulk Import Methods ---
+
+    fun showImportDialog() {
+        // Reset the state every time the dialog is opened for a fresh start
+        bulkImportState = BulkImportState(isDialogVisible = true)
+    }
+
+    fun hideImportDialog() {
+        bulkImportState = bulkImportState.copy(isDialogVisible = false)
+    }
+
+    fun onFileSelectedForImport(file: File?) {
+        if (file == null) {
+            bulkImportState = bulkImportState.copy(selectedFile = null, validationResult = ImportValidationResult.Idle)
+            return
+        }
+
+        if (file.extension.lowercase() != "csv") {
+            bulkImportState = bulkImportState.copy(
+                selectedFile = file,
+                validationResult = ImportValidationResult.Invalid("File must be a .csv file.")
+            )
+            return
+        }
+
+        // Validate that all required headers are present in the CSV
+        val expectedHeaders = setOf("code","name","barcode","cost","price","isVariablePriced","saleUnitAbbr","purchaseUnitAbbr","categoryName","stockAlert","initialStock","taxMethod","isActive","note")
+        try {
+            val actualHeaders = file.bufferedReader().use { it.readLine() }.split(',').map { it.trim() }.toSet()
+            val missingHeaders = expectedHeaders - actualHeaders
+            if (missingHeaders.isNotEmpty()) {
+                bulkImportState = bulkImportState.copy(
+                    selectedFile = file,
+                    validationResult = ImportValidationResult.Invalid("Missing columns: ${missingHeaders.joinToString()}")
+                )
+            } else {
+                bulkImportState = bulkImportState.copy(
+                    selectedFile = file,
+                    validationResult = ImportValidationResult.Valid
+                )
+            }
+        } catch (e: Exception) {
+            bulkImportState = bulkImportState.copy(
+                selectedFile = file,
+                validationResult = ImportValidationResult.Invalid("Could not read file headers.")
+            )
+        }
+    }
+
+    fun startBulkImport() {
+        val file = bulkImportState.selectedFile ?: return
+        bulkImportState = bulkImportState.copy(isImporting = true)
+        screenModelScope.launch {
+            productService.bulkImportProducts(file)
+                .onSuccess { response ->
+                    bulkImportState = bulkImportState.copy(isImporting = false, importResponse = response)
+                    fetchAllData()
+                }
+                .onFailure { error ->
+                    // Create a user-friendly error response if the upload itself fails
+                    val errorResponse = BulkImportResponse(0, 0, 0, listOf("Upload failed: ${error.message}"))
+                    bulkImportState = bulkImportState.copy(isImporting = false, importResponse = errorResponse)
+                }
+        }
     }
 
 

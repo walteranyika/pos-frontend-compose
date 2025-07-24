@@ -6,10 +6,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
+import com.chui.pos.components.BulkImportDialog
 import com.chui.pos.dtos.*
 import com.chui.pos.viewmodels.ProductViewModel
 import com.chui.pos.viewmodels.ProductsOnlyUiState
@@ -29,14 +32,33 @@ object ProductsScreen : Screen {
         val viewModel = koinInject<ProductViewModel>()
         val uiState = viewModel.uiState
 
+        val bulkImportState by remember { derivedStateOf { viewModel.bulkImportState } }
+
+        // And this to show the dialog when needed
+        if (bulkImportState.isDialogVisible) {
+            BulkImportDialog(viewModel = viewModel)
+        }
+
+
         Scaffold(
-            topBar = { TopAppBar(title = { Text("Manage Products") },
-                /*actions = {
-                    IconButton(onClick = viewModel::) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+            // ...
+            topBar = {
+                TopAppBar(
+                    title = { Text("Manage Products") },
+                    actions = {
+                        // Add the new Import button
+                        Button(onClick = viewModel::showImportDialog, shape = RoundedCornerShape(0.dp)) {
+                            Icon(Icons.Default.Upload, contentDescription = "Bulk Import")
+                            Spacer(Modifier.width(8.dp))
+                            Text("Import")
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        IconButton(onClick = {}) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        }
                     }
-                }*/
-                ) }
+                )
+            },
         ) { padding ->
             Row(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
                 if (viewModel.showDeleteConfirmDialog) {
@@ -47,12 +69,12 @@ object ProductsScreen : Screen {
                 }
 
                 // Left Panel: Form
-                Card(modifier = Modifier.weight(1.5f).padding(end = 8.dp)) {
+                Card(modifier = Modifier.weight(1.5f).padding(end = 8.dp), shape = RoundedCornerShape(0.dp),) {
                     ProductForm(viewModel, uiState)
                 }
 
                 // Right Panel: List
-                Card(modifier = Modifier.weight(2f).padding(start = 8.dp)) {
+                Card(modifier = Modifier.weight(2f).padding(start = 8.dp), shape = RoundedCornerShape(0.dp),) {
                     ProductList(
                         uiState = uiState,
                         viewModel=viewModel
@@ -106,9 +128,9 @@ private fun ProductForm(viewModel: ProductViewModel, uiState: ProductsOnlyUiStat
 
         item {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Button(onClick = viewModel::saveProduct) { Text(if (viewModel.isEditing) "Update" else "Save") }
+                Button(onClick = viewModel::saveProduct, shape = RoundedCornerShape(0.dp),) { Text(if (viewModel.isEditing) "Update" else "Save") }
                 if (viewModel.isEditing) {
-                    Button(onClick = viewModel::onDeleteClicked, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer)) { Text("Delete") }
+                    Button(onClick = viewModel::onDeleteClicked,shape = RoundedCornerShape(0.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer)) { Text("Delete") }
                 }
                 Spacer(Modifier.weight(1f))
                 if (viewModel.isEditing) {
@@ -243,6 +265,7 @@ private fun DeleteConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Uni
         text = { Text("Are you sure you want to delete this product? This action cannot be undone.") },
         confirmButton = {
             Button(
+                shape = RoundedCornerShape(0.dp),
                 onClick = onConfirm,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) {
@@ -250,7 +273,7 @@ private fun DeleteConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Uni
             }
         },
         dismissButton = {
-            Button(onClick = onDismiss) {
+            Button(onClick = onDismiss, shape = RoundedCornerShape(0.dp),) {
                 Text("Cancel")
             }
         }

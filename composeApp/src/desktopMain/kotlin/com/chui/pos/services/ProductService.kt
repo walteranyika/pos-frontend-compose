@@ -1,5 +1,6 @@
 package com.chui.pos.services
 
+import com.chui.pos.dtos.BulkImportResponse
 import com.chui.pos.dtos.ProductRequest
 import com.chui.pos.dtos.ProductResponse
 import com.chui.pos.network.safeApiCall
@@ -7,7 +8,10 @@ import com.chui.pos.network.safeApiCallForUnit
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
 import io.ktor.client.request.*
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
 import io.ktor.http.*
+import java.io.File
 
 class ProductService(private val httpClient: HttpClient) {
 
@@ -47,12 +51,27 @@ class ProductService(private val httpClient: HttpClient) {
             httpClient.get(PRODUCTS_ENDPOINT) {
                 url { parameters.append("q", query) }
             }
-        }.onFailure { logger.error(it) { "Failed to search products with query '$query'" }  }
+        }.onFailure { logger.error(it) { "Failed to search products with query '$query'" } }
 
+    suspend fun bulkImportProducts(file: File): Result<BulkImportResponse> = safeApiCall {
+        httpClient.post("$PRODUCTS_ENDPOINT/import/bulk") {
+            setBody(
+                MultiPartFormDataContent(
+                    formData {
+                        append("file", file.readBytes(), Headers.build {
+                            append(HttpHeaders.ContentType, "text/csv")
+                            append(HttpHeaders.ContentDisposition, "filename=\"${file.name}\"")
+                        })
+                    }
+                )
+            )
+        }
+    }
 
     suspend fun getProductsByCategory(categoryId: Int): Result<List<ProductResponse>> =
-        safeApiCall<List<ProductResponse>>{
-            httpClient.get(PRODUCTS_ENDPOINT){ url {parameters.append("categoryId", categoryId.toString())}}
-        }.onFailure { logger.error(it){ "Failed to search products with query '$categoryId'" }
+        safeApiCall<List<ProductResponse>> {
+            httpClient.get(PRODUCTS_ENDPOINT) { url { parameters.append("categoryId", categoryId.toString()) } }
+        }.onFailure {
+            logger.error(it) { "Failed to search products with query '$categoryId'" }
         }
 }
