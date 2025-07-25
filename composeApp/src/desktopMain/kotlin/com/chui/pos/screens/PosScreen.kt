@@ -104,6 +104,13 @@ object PosScreen : Screen {
             )
         }
 
+        if (viewModel.showAddCustomerDialog){
+            AddCustomerDialog(
+                onDismiss = viewModel::hideAddCustomerDialog,
+                onConfirm = viewModel::createCustomer
+            )
+        }
+
     }
 }
 
@@ -115,13 +122,9 @@ private fun CartView(viewModel: PosViewModel) {
 
     Surface(tonalElevation = 2.dp, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            Text("Cart", style = MaterialTheme.typography.headlineMedium)
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 8.dp),
-                thickness = DividerDefaults.Thickness,
-                color = DividerDefaults.color
-            )
-
+            CustomerSelectionView(viewModel)
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            // Cart section
             if (cartItems.isEmpty()) {
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                     Text("Cart is empty", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
@@ -187,6 +190,108 @@ private fun CartView(viewModel: PosViewModel) {
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CustomerSelectionView(viewModel: PosViewModel) {
+    val selectedCustomer by viewModel.selectedCustomer.collectAsState()
+    val customerSearchQuery by viewModel.customerSearchQuery.collectAsState()
+    val filteredCustomers by viewModel.filteredCustomers.collectAsState()
+    var isDropdownExpanded by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("Customer", style = MaterialTheme.typography.titleMedium)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ExposedDropdownMenuBox(
+                expanded = isDropdownExpanded && filteredCustomers.isNotEmpty(),
+                onExpandedChange = { isDropdownExpanded = !isDropdownExpanded },
+                modifier = Modifier.weight(1f)
+            ) {
+                OutlinedTextField(
+                    value = customerSearchQuery,
+                    onValueChange = {
+                        viewModel.onCustomerSearchQueryChanged(it)
+                        isDropdownExpanded = true
+                    },
+                    label = { Text("Search or Select Customer") },
+                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    readOnly = false,
+                    trailingIcon = {
+                        if (customerSearchQuery.isNotBlank()) {
+                            IconButton(onClick = { viewModel.onCustomerSearchQueryChanged("") }) {
+                                Icon(Icons.Default.Clear, "Clear search")
+                            }
+                        }
+                    }
+                )
+                ExposedDropdownMenu(
+                    expanded = isDropdownExpanded && filteredCustomers.isNotEmpty(),
+                    onDismissRequest = { isDropdownExpanded = false }
+                ) {
+                    filteredCustomers.forEach { customer ->
+                        DropdownMenuItem(
+                            text = { Text(customer.name) },
+                            onClick = {
+                                viewModel.onCustomerSelected(customer)
+                                isDropdownExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+            IconButton(onClick = viewModel::showAddCustomerDialog) {
+                Icon(Icons.Default.Add, contentDescription = "Add New Customer")
+            }
+        }
+    }
+}
+
+// --- NEW: Composable for the Add Customer dialog ---
+@Composable
+fun AddCustomerDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (name: String, phone: String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    val isFormValid = name.isNotBlank()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add New Customer") },
+        shape = RoundedCornerShape(0.dp),
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Customer Name*") },
+                    isError = name.isBlank()
+                )
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = { phone = it },
+                    label = { Text("Phone Number (Optional)") }
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(name, phone) },
+                enabled = isFormValid
+            ) {
+                Text("Save Customer")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+
 
 @Composable
 private fun CartItemRow(item: CartItem, onIncrement: () -> Unit, onDecrement: () -> Unit, onRemove: () -> Unit) {

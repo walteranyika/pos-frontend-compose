@@ -10,6 +10,8 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import com.chui.pos.dtos.CartItem
 import com.chui.pos.dtos.CreateSaleRequest
 import com.chui.pos.dtos.CategoryResponse
+import com.chui.pos.dtos.CreateCustomerRequest
+import com.chui.pos.dtos.CustomerResponse
 import com.chui.pos.dtos.HeldOrderResponse
 import com.chui.pos.dtos.HoldOrderItemRequest
 import com.chui.pos.dtos.HoldOrderRequest
@@ -17,6 +19,7 @@ import com.chui.pos.dtos.PaymentRequest
 import com.chui.pos.dtos.ProductResponse
 import com.chui.pos.dtos.SaleItemRequest
 import com.chui.pos.services.CategoryService
+import com.chui.pos.services.CustomerService
 import com.chui.pos.services.HeldOrderService
 import com.chui.pos.services.PrintingService
 import com.chui.pos.services.ProductService
@@ -29,6 +32,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 sealed interface ProductsUiState {
@@ -58,6 +64,7 @@ class PosViewModel(
     private val printingService: PrintingService,
     private val heldOrderService: HeldOrderService,
     private val soundService: SoundService,
+    private val customerService: CustomerService,
 ) : ScreenModel {
 
     private val _uiState = mutableStateOf<PosUiState>(PosUiState.Loading)
@@ -77,6 +84,13 @@ class PosViewModel(
 
     private val _payments = MutableStateFlow<List<PaymentRequest>>(emptyList())
     val payments = _payments.asStateFlow()
+
+    private val _allCustomers = MutableStateFlow<List<CustomerResponse>>(emptyList())
+    val selectedCustomer = MutableStateFlow<CustomerResponse?>(null)
+    val customerSearchQuery = MutableStateFlow("")
+    var showAddCustomerDialog by mutableStateOf(false)
+        private set
+
 
     var saleSubmissionState by mutableStateOf<SaleSubmissionState>(SaleSubmissionState.Idle)
         private set
@@ -106,7 +120,7 @@ class PosViewModel(
 
 
     init {
-        fetchProductsAndCategories()
+        loadInitialData()
     }
 
     fun onOpenPaymentDialog() {
@@ -121,7 +135,111 @@ class PosViewModel(
         actionMessage = null
     }
 
+    // Derived state to filter customers based on the search query
+    val filteredCustomers = combine(
+        _allCustomers,
+        customerSearchQuery
+    ) { customers, query ->
+        if (query.isBlank()) {
+            customers
+        } else {
+            customers.filter {
+                it.name.contains(query, ignoreCase = true) ||
+                        it.phoneNumber?.contains(query) == true
+            }
+        }
+    }.stateIn(screenModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+
+
+    fun showAddCustomerDialog() {
+        showAddCustomerDialog = true
+    }
+
+    fun hideAddCustomerDialog() {
+        showAddCustomerDialog = false
+    }
+
+    fun onCustomerSelected(customer: CustomerResponse) {
+        selectedCustomer.value = customer
+        // Set search query to the customer's name for display, but don't trigger a new search
+        customerSearchQuery.value = customer.name
+    }
+
+    fun onCustomerSearchQueryChanged(query: String) {
+        customerSearchQuery.value = query
+    }
+
+    fun createCustomer(name: String, phone: String) {
+        if (name.isBlank()) return
+        val request = CreateCustomerRequest(name, phone.ifBlank { null })
+        screenModelScope.launch {
+            customerService.createCustomer(request)
+                .onSuccess { newCustomer ->
+                    hideAddCustomerDialog()
+                    // Refresh customer list and select the new one
+                    loadCustomers {
+                        onCustomerSelected(newCustomer)
+                    }
+                    actionMessage = "Customer '${newCustomer.name}' created."
+                }
+                .onFailure { error ->
+                    actionMessage = "Error: ${error.message}"
+                }
+        }
+    }
+
+
+    private fun loadInitialData() {
+        productsState = ProductsUiState.Loading
+        screenModelScope.launch {
+            coroutineScope {
+                // Load products, categories, and customers in parallel
+                val productsJob = async { productService.getProducts() }
+                val categoriesJob = async { categoryService.getCategories() }
+                val customersJob = async { customerService.getCustomers() }
+
+                val productsResult = productsJob.await()
+                val categoriesResult = categoriesJob.await()
+                val customersResult = customersJob.await()
+
+                // Handle results
+                val products = productsResult.getOrElse {
+                    productsState = ProductsUiState.Error("Failed to load products: ${it.message}")
+                    return@coroutineScope
+                }
+                val categories = categoriesResult.getOrElse {
+                    productsState = ProductsUiState.Error("Failed to load categories: ${it.message}")
+                    return@coroutineScope
+                }
+                _allCustomers.value = customersResult.getOrElse {
+                    actionMessage = "Failed to load customers: ${it.message}"
+                    emptyList()
+                }
+
+                productsState = ProductsUiState.Success(products, categories)
+                selectDefaultCustomer() // Select "Walk-in Customer" on startup
+            }
+        }
+    }
+
+    private fun loadCustomers(onComplete: () -> Unit = {}) {
+        screenModelScope.launch {
+            customerService.getCustomers()
+                .onSuccess {
+                    _allCustomers.value = it
+                    onComplete()
+                }
+                .onFailure { actionMessage = "Failed to refresh customers: ${it.message}" }
+        }
+    }
+
+    private fun selectDefaultCustomer() {
+        val walkIn = _allCustomers.value.find { it.name.equals("Walk-in Customer", ignoreCase = true) }
+        if (walkIn != null) {
+            onCustomerSelected(walkIn)
+        }
+    }
 
 
     private fun fetchProductsAndCategories() {
@@ -192,21 +310,28 @@ class PosViewModel(
     }
 
     fun submitSale() {
+        val customerId = selectedCustomer.value?.id ?: run {
+            actionMessage = "Please select a customer before submitting a sale."
+            return
+        }
         saleSubmissionState = SaleSubmissionState.Loading
-        screenModelScope.launch {
-            val saleItems = _cartItems.value.values.map {
-                SaleItemRequest(
-                    productId = it.productId,
-                    quantity = it.quantity.toDouble(),
-                    price = it.price,
-                    discount = 0.0
-                )
-            }
 
-            val saleRequest = CreateSaleRequest(
-                items = saleItems,
-                payments = _payments.value
+        val saleItems = _cartItems.value.values.map {
+            SaleItemRequest(
+                productId = it.productId,
+                quantity = it.quantity.toDouble(),
+                price = it.price,
+                discount = 0.0
             )
+        }
+
+        val saleRequest = CreateSaleRequest(
+            items = saleItems,
+            payments = _payments.value,
+            customerId = customerId
+        )
+        screenModelScope.launch {
+
 
             saleService.createSale(saleRequest)
                 .onSuccess {
@@ -281,13 +406,18 @@ class PosViewModel(
            actionMessage = "No items in cart"
            return
        }
+        val customerId = selectedCustomer.value?.id ?: run {
+            actionMessage = "Please select a customer to hold the order."
+            return
+        }
         val request = HoldOrderRequest(
             items = _cartItems.value.values.map {
                 HoldOrderItemRequest(
                     productId = it.productId,
                     quantity = it.quantity.toDouble()
                 )
-            }
+            },
+            customerId = customerId
         )
 
         screenModelScope.launch {
@@ -328,6 +458,7 @@ class PosViewModel(
         _cartItems.value = emptyMap()
         _payments.value = emptyList()
         recalculateTotal(emptyMap())
+        selectDefaultCustomer()
         if (clearHeldContext) {
             activeHeldOrderId = null
         }
@@ -335,6 +466,15 @@ class PosViewModel(
 
     fun resumeHeldOrder(heldOrder: HeldOrderResponse){
 //        clearCart(clearHeldContext = false)
+        val customer = _allCustomers.value.find { it.id == heldOrder.customerId }
+        if (customer != null) {
+            onCustomerSelected(customer)
+        } else {
+            // Fallback to walk-in if customer was deleted, or handle error
+            selectDefaultCustomer()
+            actionMessage = "Warning: Original customer not found."
+        }
+
         val resumeCartItems = heldOrder.items.associate {
             it.productId to CartItem(
                 productId = it.productId,

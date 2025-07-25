@@ -3,6 +3,7 @@ package com.chui.pos.di
 import com.chui.pos.managers.AuthManager
 import com.chui.pos.managers.SettingsManager
 import com.chui.pos.services.CategoryService
+import com.chui.pos.services.CustomerService
 import com.chui.pos.services.HealthService
 import com.chui.pos.services.HeldOrderService
 import com.chui.pos.services.LoginService
@@ -88,13 +89,14 @@ val appModule = module {
         single { HeldOrderService(get()) }
         single { SoundService() }
         single { UserService(get()) }
+        single { CustomerService(get()) }
 
 
 
 
         // ViewModels
         factory { LoginViewModel(get(), get()) }
-        factory { PosViewModel(get(), get(), get(), get(), get(), get()) }
+        factory { PosViewModel(get(), get(), get(), get(), get(), get(), get()) }
         factory { UnitViewModel(get() ) }
         factory { ReportsViewModel(get() ) }
         factory { CategoryViewModel(get() ) }

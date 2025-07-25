@@ -4,7 +4,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class HoldOrderRequest(
-    val items: List<HoldOrderItemRequest>
+    val items: List<HoldOrderItemRequest>,
+    val customerId: Long
 )
 
 @Serializable
@@ -18,6 +19,7 @@ data class HeldOrderResponse(
     val id: Long,
     val ref: String,
     val items: List<HeldOrderItemResponse>,
+    val customerId: Long,
     // Using String for simplicity, can be parsed with a custom serializer if needed
     val createdAt: String? = null
 )

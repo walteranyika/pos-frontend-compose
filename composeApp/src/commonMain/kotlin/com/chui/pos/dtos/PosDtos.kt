@@ -27,5 +27,6 @@ data class CreateSaleRequest(
     val items: List<SaleItemRequest>,
     val payments: List<PaymentRequest>,
     val discount: Double = 0.0,
-    val isCreditSale: Boolean = false
+    val isCreditSale: Boolean = false,
+    val customerId: Long,
 )
