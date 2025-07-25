@@ -11,6 +11,7 @@ data class SaleSummaryResponse(
     val paidAmount: Double,
     val paymentStatus: String,
     val isCreditSale: Boolean,
+    val customer: Customer,
     val cashier: String,
     val saleDate: String, // Keep as String for deserialization, parse in UI
     val items: List<SaleItemDetail>,
@@ -42,4 +43,11 @@ data class PagedResponse<T>(
     val first: Boolean,
     val last: Boolean,
     val empty: Boolean
+)
+
+@Serializable
+data class Customer(
+    val id: Long,
+    val name: String,
+    val phoneNumber: String?=null
 )

@@ -57,6 +57,7 @@ private fun SaleDetailView(sale: SaleSummaryResponse?) {
                 Spacer(Modifier.height(8.dp))
                 Text("Ref: ${sale.ref}", style = MaterialTheme.typography.bodyLarge)
                 Text("Cashier: ${sale.cashier}", style = MaterialTheme.typography.bodyMedium)
+                Text("Customer: ${sale.customer.name}", style = MaterialTheme.typography.bodyMedium)
                 Text("Date: ${formatDateTime(sale.saleDate)}", style = MaterialTheme.typography.bodyMedium)
                 HorizontalDivider(Modifier.padding(vertical = 16.dp))
             }
