@@ -29,5 +29,6 @@ data class HeldOrderItemResponse(
     val productId: Int,
     val productName: String,
     val quantity: Double,
-    val price: Double
+    val price: Double,
+    var isVariablePriced : Boolean= false
 )

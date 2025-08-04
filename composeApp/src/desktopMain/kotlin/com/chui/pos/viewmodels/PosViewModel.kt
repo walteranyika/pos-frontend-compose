@@ -116,7 +116,8 @@ class PosViewModel(
     var actionMessage by mutableStateOf<String?>(null)
         private set
 
-
+    var variablePriceProduct by mutableStateOf<ProductResponse?>(null)
+        private set
 
 
     init {
@@ -284,22 +285,53 @@ class PosViewModel(
     }
 
     fun onProductClicked(product: ProductResponse) {
+        if (product.isVariablePriced) {
+            // If variable, show the dialog
+            variablePriceProduct = product
+        } else {
+            // If standard, use existing logic to add to cart
+            val existingItem = _cartItems.value[product.id]
+            if (existingItem != null && !existingItem.isVariablePriced) {
+                _cartItems.value = _cartItems.value + (product.id to existingItem.copy(quantity = existingItem.quantity + 1.0))
+            } else if (existingItem == null) {
+                val newItem = CartItem(
+                    productId = product.id,
+                    name = product.name,
+                    price = product.price,
+                    quantity = 1.0, // Use Double
+                    isVariablePriced = false // Mark as standard
+                )
+                _cartItems.value = _cartItems.value + (product.id to newItem)
+            }
+
+        }
+
         _cartItems.update { currentCart ->
             val mutableCart = currentCart.toMutableMap()
-            val cartItem = mutableCart[product.id]
-
-            if (cartItem != null) {
-                mutableCart[product.id] = cartItem.copy(quantity = cartItem.quantity + 1)
-            } else {
-                mutableCart[product.id] = CartItem(
-                    productId = product.id, name = product.name, price = product.price, quantity = 1
-                )
-            }
             recalculateTotal(mutableCart)
             mutableCart
         }
         soundService.playAddToCartSound()
+
     }
+
+    /*    fun onProductClicked(product: ProductResponse) {
+            _cartItems.update { currentCart ->
+                val mutableCart = currentCart.toMutableMap()
+                val cartItem = mutableCart[product.id]
+
+                if (cartItem != null) {
+                    mutableCart[product.id] = cartItem.copy(quantity = cartItem.quantity + 1)
+                } else {
+                    mutableCart[product.id] = CartItem(
+                        productId = product.id, name = product.name, price = product.price, quantity = 1
+                    )
+                }
+                recalculateTotal(mutableCart)
+                mutableCart
+            }
+            soundService.playAddToCartSound()
+        }*/
 
     fun addPayment(payment: PaymentRequest) {
         _payments.update { it + payment }
@@ -352,6 +384,49 @@ class PosViewModel(
         printReceipt = shouldPrint
     }
 
+    fun hideVariablePriceDialog() {
+        variablePriceProduct = null
+    }
+
+
+    fun addVariablePriceItemToCart(amount: Double) {
+        val product = variablePriceProduct ?: return
+
+        // Avoid division by zero
+        if (product.price <= 0) {
+            actionMessage = "Cannot calculate quantity for a product with zero price."
+            hideVariablePriceDialog()
+            return
+        }
+
+        val calculatedQuantity = amount / product.price
+
+        val newItem = CartItem(
+            productId = product.id,
+            name = product.name,
+            price = product.price, // The unit price
+            quantity = calculatedQuantity,
+            isVariablePriced = true // Mark as variable
+        )
+
+        // Add to existing quantity if already in cart, otherwise add as new
+        val existingItem = _cartItems.value[product.id]
+        val updatedItem = if (existingItem != null) {
+            newItem.copy(quantity = existingItem.quantity + calculatedQuantity)
+        } else {
+            newItem
+        }
+
+        _cartItems.value = _cartItems.value + (product.id to updatedItem)
+        hideVariablePriceDialog()
+        _cartItems.update { currentCart ->
+            val mutableCart = currentCart.toMutableMap()
+            recalculateTotal(mutableCart)
+            mutableCart
+        }
+    }
+
+
 
     fun onSearchQueryChange(query: String) {
         searchQuery = query
@@ -382,7 +457,7 @@ class PosViewModel(
         saleSubmissionState = SaleSubmissionState.Idle
     }
 
-    fun incrementQuantity(productId: Int) {
+  /*  fun incrementQuantity(productId: Int) {
         updateItemQuantity(productId, 1)
         soundService.playAddToCartSound()
     }
@@ -390,6 +465,29 @@ class PosViewModel(
     fun decrementQuantity(productId: Int) {
         updateItemQuantity(productId, -1)
         soundService.playAddToCartSound()
+    }*/
+
+
+    // 4. Update increment/decrement to respect the new flag
+    fun incrementQuantity(productId: Int) {
+        val item = _cartItems.value[productId] ?: return
+        // Only allow for standard items
+        if (!item.isVariablePriced) {
+            _cartItems.value = _cartItems.value + (productId to item.copy(quantity = item.quantity + 1.0))
+        }
+    }
+
+    fun decrementQuantity(productId: Int) {
+        val item = _cartItems.value[productId] ?: return
+        // Only allow for standard items
+        if (!item.isVariablePriced) {
+            val newQuantity = item.quantity - 1.0
+            if (newQuantity > 0) {
+                _cartItems.value = _cartItems.value + (productId to item.copy(quantity = newQuantity))
+            } else {
+                removeItem(productId)
+            }
+        }
     }
 
     fun removeItem(productId: Int) {
@@ -480,7 +578,8 @@ class PosViewModel(
                 productId = it.productId,
                 name = it.productName,
                 price = it.price,
-                quantity = it.quantity.toInt()
+                quantity = it.quantity,
+                isVariablePriced = it.isVariablePriced
             )
         }
         _cartItems.value = resumeCartItems

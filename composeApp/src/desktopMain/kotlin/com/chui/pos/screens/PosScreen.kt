@@ -111,6 +111,16 @@ object PosScreen : Screen {
             )
         }
 
+        val variablePriceProduct = viewModel.variablePriceProduct
+        if (variablePriceProduct != null) {
+            VariablePriceDialog(
+                product = variablePriceProduct,
+                onDismiss = viewModel::hideVariablePriceDialog,
+                onConfirm = viewModel::addVariablePriceItemToCart
+            )
+        }
+
+
     }
 }
 
@@ -305,14 +315,23 @@ private fun CartItemRow(item: CartItem, onIncrement: () -> Unit, onDecrement: ()
         }
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            IconButton(onClick = onDecrement, modifier = Modifier.size(28.dp)) {
+            // Disable this button for variable priced items
+            IconButton(onClick = onDecrement, modifier = Modifier.size(28.dp), enabled = !item.isVariablePriced) {
                 Icon(
                     Icons.Default.Remove,
                     "Decrement"
                 )
             }
-            Text(item.quantity.toString(), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-            IconButton(onClick = onIncrement, modifier = Modifier.size(28.dp)) { Icon(Icons.Default.Add, "Increment") }
+            // Format quantity differently based on item type
+            Text(
+                text = if (item.isVariablePriced) "%.3f".format(item.quantity) else "%.0f".format(item.quantity),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold
+            )
+            // Disable this button for variable priced items
+            IconButton(onClick = onIncrement, modifier = Modifier.size(28.dp), enabled = !item.isVariablePriced) {
+                Icon(Icons.Default.Add, "Increment")
+            }
         }
 
         Text(
@@ -487,8 +506,20 @@ private fun ProductListView(viewModel: PosViewModel) {
                 onDismissRequest = { /* We don't want this */ }
             ) {
                 searchResults.forEach { product ->
+                    val varyingPrice = if (product.isVariablePriced){
+                        "(V)"
+                    }else{
+                        ""
+                    }
                     DropdownMenuItem(
-                        text = { Text("${product.name} (${product.code})") },
+                        text = {
+                            Column {
+                                Text("${product.name} (${product.code})")
+                                Text("$varyingPrice ${product.price} / ${product.saleUnit.name}",
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                            }
+                        },
                         onClick = { viewModel.onSearchResultSelected(product) }
                     )
                 }
@@ -571,6 +602,11 @@ private fun CategoryFilterRow(
 
 @Composable
 private fun ProductGridItem(product: ProductResponse, onClick: () -> Unit) {
+    val varyingPrice = if (product.isVariablePriced){
+        "(V)"
+    }else{
+        ""
+    }
     Card(
         modifier = Modifier.clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -580,7 +616,7 @@ private fun ProductGridItem(product: ProductResponse, onClick: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 Text(
                     product.name,
                     style = MaterialTheme.typography.titleMedium,
@@ -590,11 +626,60 @@ private fun ProductGridItem(product: ProductResponse, onClick: () -> Unit) {
                 Text(product.code, style = MaterialTheme.typography.bodySmall)
             }
             Text(
-                "%.2f".format(product.price),
+                "%.2f".format(product.price)+" $varyingPrice",
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
         }
     }
+}
+
+// Add this new composable function within your PosScreen.kt file
+
+@Composable
+private fun VariablePriceDialog(
+    product: ProductResponse,
+    onDismiss: () -> Unit,
+    onConfirm: (amount: Double) -> Unit
+) {
+    var amountInput by remember { mutableStateOf("") }
+    // Validate that the input is a positive number
+    val isAmountValid = amountInput.toDoubleOrNull()?.let { it > 0 } ?: false
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Enter Amount for ${product.name}") },
+        shape = RoundedCornerShape(8.dp),
+        text = {
+            Column {
+                Text(
+                    "Unit Price: %.2f per ${product.saleUnit.name}".format(product.price),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = amountInput,
+                    modifier = Modifier.fillMaxWidth(),
+                    onValueChange = { amountInput = it },
+                    label = { Text("Amount") },
+                    singleLine = true,
+                    isError = amountInput.isNotBlank() && !isAmountValid
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(amountInput.toDouble()) },
+                enabled = isAmountValid
+            ) {
+                Text("Add to Cart")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

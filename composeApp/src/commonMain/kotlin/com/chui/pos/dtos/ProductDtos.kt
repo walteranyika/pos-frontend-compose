@@ -49,7 +49,8 @@ data class CartItem(
     val productId: Int,
     val name: String,
     val price: Double,
-    var quantity: Int
+    var quantity: Double,
+    val  isVariablePriced: Boolean
 ) {
     val total: Double
         get() = price * quantity
