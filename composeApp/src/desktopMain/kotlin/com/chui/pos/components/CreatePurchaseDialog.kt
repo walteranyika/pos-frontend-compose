@@ -63,7 +63,7 @@ fun CreatePurchaseDialog(viewModel: PurchaseViewModel) {
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = item.productId.toString(), // Replace with product name if you fetch it
+                                text = "${item.code}: ${item.name}", // Replace with product name if you fetch it
                                 modifier = Modifier.weight(2f)
                             )
                             OutlinedTextField(

@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import com.chui.pos.viewmodels.StockViewModel
@@ -115,11 +116,20 @@ object StockScreen : Screen {
                                     headlineContent = { Text(product.name) },
                                     supportingContent = { Text("Code: ${product.code}") },
                                     trailingContent = {
-                                        Text(
-                                            "${product.quantity} ${product.saleUnit.name}",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            fontWeight = FontWeight.Bold
-                                        )
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text(
+                                                "${product.quantity}",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                textAlign = TextAlign.End
+                                            )
+                                            Text(
+                                                product.saleUnit.name,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = FontWeight.Bold,
+                                                textAlign = TextAlign.End
+                                            )
+                                        }
                                     },
                                     modifier = Modifier.clickable { viewModel.onProductSelected(product) }
                                 )

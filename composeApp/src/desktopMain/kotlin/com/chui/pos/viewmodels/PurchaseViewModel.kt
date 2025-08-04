@@ -108,7 +108,9 @@ class PurchaseViewModel(
             val newItem = PurchaseItemRequest(
                 productId = product.id,
                 quantity = 1.0,
-                costPrice = product.cost
+                costPrice = product.cost,
+                name = product.name,
+                code = product.code
             )
             createPurchaseState = createPurchaseState.copy(
                 items = createPurchaseState.items + newItem,

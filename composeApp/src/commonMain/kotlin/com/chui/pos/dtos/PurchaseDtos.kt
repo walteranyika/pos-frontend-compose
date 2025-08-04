@@ -14,7 +14,9 @@ data class PurchaseRequest(
 data class PurchaseItemRequest(
     val productId: Int,
     val quantity: Double,
-    val costPrice: Double
+    val costPrice: Double,
+    val name: String?=null,
+    val code: String? =null
 )
 
 @Serializable
