@@ -138,8 +138,6 @@ object StockScreen : Screen {
                         }
                     }
                 }
-
-                // Adjustment Pane
             }
         }
     }
