@@ -129,6 +129,7 @@ private fun CartView(viewModel: PosViewModel) {
     val cartItems by viewModel.cartItems.collectAsState()
     val total by viewModel.cartTotal.collectAsState()
     val activeHeldOrderId by remember { mutableStateOf(viewModel.activeHeldOrderId) }
+    //val activeHeldOrderId by viewModel.activeHeldOrderId.collectAsState() // Correctly observes the StateFlow
 
     Surface(tonalElevation = 2.dp, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {

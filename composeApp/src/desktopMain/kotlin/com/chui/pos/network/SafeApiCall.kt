@@ -17,11 +17,21 @@ suspend inline fun <reified S> safeApiCall(eventBus: AppEventBus, crossinline ap
         if (response.status.isSuccess()){
             Result.success(response.body<S>())
         }else{
-            val errResponse = response.body<ErrorResponse>()
-            if(response.status.value == 401){
+            if(response.status.value == 401 || response.status.value == 403){
                 eventBus.sendEvent(AppEvent.TokenExpired)
             }
-            Result.failure(Exception(errResponse.message))
+            val errorMessage = try {
+                // Attempt to parse the server's specific error message
+                response.body<ErrorResponse>().message
+            } catch (e: Exception) {
+                println("Could not parse error response body. Status: ${response.status}. Error: ${e.message}")
+                if(listOf(401, 403).contains(response.status.value)){
+                    "Your session has expired. Please login again."
+                }else {
+                    "An unexpected error occurred Status: ${response.status.value}. Please try again."
+                }
+            }
+            Result.failure(Exception(errorMessage))
         }
     }catch (e: Exception){
         Result.failure(e.toUserFriendlyException())

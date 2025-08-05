@@ -26,7 +26,7 @@ class ProductService(private val httpClient: HttpClient,
     suspend fun getProducts(): Result<List<ProductResponse>> =
         safeApiCall<List<ProductResponse>>(eventBus) {
             httpClient.get(PRODUCTS_ENDPOINT)
-        }.onFailure { logger.error(it) { "Failed to fetch products" } }
+        }.onFailure  { "Failed to fetch products" }
 
     suspend fun createProduct(request: ProductRequest): Result<ProductResponse> =
         safeApiCall<ProductResponse>(eventBus)  {
