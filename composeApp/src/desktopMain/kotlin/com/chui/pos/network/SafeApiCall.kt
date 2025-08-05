@@ -28,6 +28,13 @@ suspend inline fun <reified S> safeApiCall(eventBus: AppEventBus, crossinline ap
     }
 }
 
+suspend inline fun safeApiCallForUnit(eventBus: AppEventBus, crossinline apiCall: suspend () -> HttpResponse): Result<Unit> {
+    return safeApiCall(eventBus, apiCall)
+}
+
+
+
+/*
 suspend inline fun safeApiCallForUnit(eventBus: AppEventBus,crossinline apiCall: suspend () -> HttpResponse): Result<Unit>{
     return try {
         val response = apiCall()
@@ -44,6 +51,7 @@ suspend inline fun safeApiCallForUnit(eventBus: AppEventBus,crossinline apiCall:
         Result.failure(e.toUserFriendlyException())
     }
 }
+*/
 
 
 

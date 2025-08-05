@@ -13,6 +13,7 @@ import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.transitions.SlideTransition
 import com.chui.pos.components.AppDrawerContent
 import com.chui.pos.components.ServerStatusIndicator
+import com.chui.pos.components.SessionExpiredDialog
 import com.chui.pos.di.appModule
 import com.chui.pos.events.AppEvent
 import com.chui.pos.events.AppEventBus
@@ -41,6 +42,7 @@ fun main() {
         val scope = rememberCoroutineScope()
         val isServerOnline by serverStatusViewModel.isServerOnline.collectAsState()
         val user by remember { mutableStateOf(authManager.getUserFullName()) }
+        var showSessionExpiredDialog by remember { mutableStateOf(false) }
 //    if (authManager.hasPermission("MANAGE_USERS")) {
         Window(
             onCloseRequest = {
@@ -64,12 +66,22 @@ fun main() {
                                         println("TokenExpired event received. Navigating to Login.")
                                         // Clear any local session data (e.g., the stored token)
                                         authManager.clearSession()
+                                        showSessionExpiredDialog = true
                                         // Replace the entire navigation stack with the LoginScreen
-                                        nav.replaceAll(LoginScreen)
                                     }
                                 }
                             }
                         }
+
+                        // Display the dialog when the state is true
+                        if (showSessionExpiredDialog) {
+                            SessionExpiredDialog {
+                                // On confirm, hide the dialog and navigate to the Login screen
+                                showSessionExpiredDialog = false
+                                nav.replaceAll(LoginScreen)
+                            }
+                        }
+
 
                         if (isLoggedIn) {
                             ModalNavigationDrawer(
