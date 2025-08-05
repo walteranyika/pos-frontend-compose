@@ -43,7 +43,7 @@ fun main() {
         val isServerOnline by serverStatusViewModel.isServerOnline.collectAsState()
         val user by remember { mutableStateOf(authManager.getUserFullName()) }
         var showSessionExpiredDialog by remember { mutableStateOf(false) }
-//    if (authManager.hasPermission("MANAGE_USERS")) {
+
         Window(
             onCloseRequest = {
                 scope.launch {
@@ -63,20 +63,15 @@ fun main() {
                             eventBus.events.collect { event ->
                                 when (event) {
                                     is AppEvent.TokenExpired -> {
-                                        println("TokenExpired event received. Navigating to Login.")
-                                        // Clear any local session data (e.g., the stored token)
                                         authManager.clearSession()
                                         showSessionExpiredDialog = true
-                                        // Replace the entire navigation stack with the LoginScreen
                                     }
                                 }
                             }
                         }
 
-                        // Display the dialog when the state is true
                         if (showSessionExpiredDialog) {
                             SessionExpiredDialog {
-                                // On confirm, hide the dialog and navigate to the Login screen
                                 showSessionExpiredDialog = false
                                 nav.replaceAll(LoginScreen)
                             }
