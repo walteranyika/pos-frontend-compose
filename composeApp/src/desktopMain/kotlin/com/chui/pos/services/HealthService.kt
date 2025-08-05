@@ -1,5 +1,6 @@
 package com.chui.pos.services
 
+import com.chui.pos.events.AppEventBus
 import com.chui.pos.network.safeApiCallForUnit
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
@@ -7,7 +8,7 @@ import io.ktor.client.request.*
 
 private val logger = KotlinLogging.logger {}
 
-class HealthService(private val httpClient: HttpClient) {
+class HealthService(private val httpClient: HttpClient, private val eventBus: AppEventBus) {
     companion object {
         private const val HEALTH_ENDPOINT = "health"
     }
@@ -17,7 +18,7 @@ class HealthService(private val httpClient: HttpClient) {
      * Returns a successful Result if the server responds with 2xx, otherwise a failure.
      */
     suspend fun checkHealth(): Result<Unit> =
-        safeApiCallForUnit {
+        safeApiCallForUnit(eventBus) {
             httpClient.get(HEALTH_ENDPOINT)
         }.onFailure { logger.warn { "Health check failed: ${it.message}" } }
 }

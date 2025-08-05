@@ -3,6 +3,7 @@ package com.chui.pos.services
 
 import com.chui.pos.dtos.PurchaseRequest
 import com.chui.pos.dtos.PurchaseResponse
+import com.chui.pos.events.AppEventBus
 import com.chui.pos.network.safeApiCall
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
@@ -11,18 +12,18 @@ import io.ktor.http.*
 
 private val logger = KotlinLogging.logger {}
 
-class PurchaseService(private val httpClient: HttpClient) {
+class PurchaseService(private val httpClient: HttpClient,  private val eventBus: AppEventBus) {
     companion object {
         private const val PURCHASES_ENDPOINT = "purchases"
     }
 
     suspend fun getAllPurchases(): Result<List<PurchaseResponse>> =
-        safeApiCall<List<PurchaseResponse>> {
+        safeApiCall<List<PurchaseResponse>>(eventBus) {
             httpClient.get(PURCHASES_ENDPOINT)
         }.onFailure { logger.error(it) { "Failed to fetch purchases" } }
 
     suspend fun createPurchase(request: PurchaseRequest): Result<PurchaseResponse> =
-        safeApiCall<PurchaseResponse> {
+        safeApiCall<PurchaseResponse>(eventBus) {
             httpClient.post(PURCHASES_ENDPOINT) {
                 contentType(ContentType.Application.Json)
                 setBody(request)

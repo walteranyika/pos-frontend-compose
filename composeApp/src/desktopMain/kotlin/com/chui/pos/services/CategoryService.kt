@@ -2,6 +2,7 @@ package com.chui.pos.services
 
 import com.chui.pos.dtos.CategoryRequest
 import com.chui.pos.dtos.CategoryResponse
+import com.chui.pos.events.AppEventBus
 import com.chui.pos.network.safeApiCall
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -14,7 +15,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import org.slf4j.LoggerFactory
 
-class CategoryService(private val httpClient: HttpClient) {
+class CategoryService(private val httpClient: HttpClient,  private val eventBus: AppEventBus) {
 
     companion object {
         private const val CATEGORIES_ENDPOINT = "categories"
@@ -22,13 +23,13 @@ class CategoryService(private val httpClient: HttpClient) {
     }
 
     suspend fun getCategories(): Result<List<CategoryResponse>> =
-        safeApiCall<List<CategoryResponse>> {
+        safeApiCall<List<CategoryResponse>>(eventBus) {
             httpClient.get(CATEGORIES_ENDPOINT)
         }.onFailure { logger.error("Failed to fetch categories", it) }
 
 
     suspend fun createCategory(request: CategoryRequest): Result<CategoryResponse> =
-        safeApiCall<CategoryResponse> {
+        safeApiCall<CategoryResponse>(eventBus) {
             httpClient.post(CATEGORIES_ENDPOINT) {
                 contentType(ContentType.Application.Json)
                 setBody(request)
@@ -36,7 +37,7 @@ class CategoryService(private val httpClient: HttpClient) {
         }.onFailure { logger.error("Failed to create category", it) }
 
     suspend fun updateCategory(id: Int, request: CategoryRequest): Result<CategoryResponse> =
-        safeApiCall<CategoryResponse> {
+        safeApiCall<CategoryResponse>(eventBus) {
             httpClient.put("$CATEGORIES_ENDPOINT/$id") {
                 contentType(ContentType.Application.Json)
                 setBody(request)
@@ -44,13 +45,13 @@ class CategoryService(private val httpClient: HttpClient) {
         }.onFailure { logger.error("Failed to update category with id $id", it) }
 
     suspend fun deleteCategory(id: Int): Result<Unit> =
-        safeApiCall<Unit> {
+        safeApiCall<Unit>(eventBus) {
             httpClient.delete("$CATEGORIES_ENDPOINT/$id")
         }.onFailure { logger.error("Failed to delete category with id $id", it) }
 
 
     suspend fun searchCategories(query: String): Result<List<CategoryResponse>> =
-        safeApiCall<List<CategoryResponse>> {
+        safeApiCall<List<CategoryResponse>>(eventBus) {
             httpClient.get(CATEGORIES_ENDPOINT) {
                 url { parameters.append("query", query) }
             }

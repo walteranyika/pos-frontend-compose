@@ -1,6 +1,8 @@
 package com.chui.pos.network
 
 import com.chui.pos.dtos.ErrorResponse
+import com.chui.pos.events.AppEvent
+import com.chui.pos.events.AppEventBus
 import io.ktor.client.call.body
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.isSuccess
@@ -9,13 +11,16 @@ import kotlinx.serialization.SerializationException
 import java.net.ConnectException
 
 
-suspend inline fun <reified S> safeApiCall(crossinline apiCall: suspend () -> HttpResponse) : Result<S>{
+suspend inline fun <reified S> safeApiCall(eventBus: AppEventBus, crossinline apiCall: suspend () -> HttpResponse) : Result<S>{
     return try {
         val response = apiCall()
         if (response.status.isSuccess()){
             Result.success(response.body<S>())
         }else{
             val errResponse = response.body<ErrorResponse>()
+            if(response.status.value == 401){
+                eventBus.sendEvent(AppEvent.TokenExpired)
+            }
             Result.failure(Exception(errResponse.message))
         }
     }catch (e: Exception){
@@ -23,13 +28,16 @@ suspend inline fun <reified S> safeApiCall(crossinline apiCall: suspend () -> Ht
     }
 }
 
-suspend inline fun safeApiCallForUnit(crossinline apiCall: suspend () -> HttpResponse): Result<Unit>{
+suspend inline fun safeApiCallForUnit(eventBus: AppEventBus,crossinline apiCall: suspend () -> HttpResponse): Result<Unit>{
     return try {
         val response = apiCall()
         if (response.status.isSuccess()){
             Result.success(Unit)
         }else{
             val errResponse = response.body<ErrorResponse>()
+            if(response.status.value == 401){
+                eventBus.sendEvent(AppEvent.TokenExpired)
+            }
             Result.failure(Exception(errResponse.message))
         }
     }catch (e: Exception){

@@ -1,5 +1,6 @@
 package com.chui.pos.di
 
+import com.chui.pos.events.AppEventBus
 import com.chui.pos.managers.AuthManager
 import com.chui.pos.managers.SettingsManager
 import com.chui.pos.services.CategoryService
@@ -73,23 +74,25 @@ val appModule = module {
 
         single { AuthManager(get()) }
 
+        single { AppEventBus() }
+
         // Services (now receive HttpClient via constructor)
-        single { LoginService(get()) }
-        single { ProductService(get()) }
-        single { SaleService(get()) }
-        single { UnitService(get()) }
-        single { CategoryService(get()) }
-        single { ProductService(get()) }
-        single { ReportService(get()) }
+        single { LoginService(get(), get()) }
+        single { ProductService(get(), get()) }
+        single { SaleService(get(), get()) }
+        single { UnitService(get(), get()) }
+        single { CategoryService(get(), get()) }
+        single { ProductService(get(), get()) }
+        single { ReportService(get(), get()) }
         single { PrintingService(get()) }
-        single { StockService(get()) }
-        single { PurchaseService(get()) }
-        single { HealthService(get()) }
+        single { StockService(get(), get()) }
+        single { PurchaseService(get(), get()) }
+        single { HealthService(get(), get()) }
         single { ServerStatusViewModel(get()) }
-        single { HeldOrderService(get()) }
+        single { HeldOrderService(get(), get()) }
         single { SoundService() }
-        single { UserService(get()) }
-        single { CustomerService(get()) }
+        single { UserService(get(), get()) }
+        single { CustomerService(get(), get()) }
 
 
 

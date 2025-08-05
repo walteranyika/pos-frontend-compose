@@ -2,6 +2,7 @@ package com.chui.pos.services
 
 import com.chui.pos.dtos.HeldOrderResponse
 import com.chui.pos.dtos.HoldOrderRequest
+import com.chui.pos.events.AppEventBus
 import com.chui.pos.network.safeApiCall
 import com.chui.pos.network.safeApiCallForUnit
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -11,18 +12,18 @@ import io.ktor.http.*
 
 private val logger = KotlinLogging.logger {}
 
-class HeldOrderService(private val httpClient: HttpClient) {
+class HeldOrderService(private val httpClient: HttpClient,  private val eventBus: AppEventBus) {
     companion object {
         private const val HELD_ORDERS_ENDPOINT = "held-orders"
     }
 
     suspend fun getHeldOrders(): Result<List<HeldOrderResponse>> =
-        safeApiCall<List<HeldOrderResponse>> {
+        safeApiCall<List<HeldOrderResponse>>(eventBus) {
             httpClient.get(HELD_ORDERS_ENDPOINT)
         }.onFailure { logger.error(it) { "Failed to fetch held orders" } }
 
     suspend fun holdOrder(request: HoldOrderRequest): Result<HeldOrderResponse> =
-        safeApiCall<HeldOrderResponse> {
+        safeApiCall<HeldOrderResponse>(eventBus) {
             httpClient.post(HELD_ORDERS_ENDPOINT) {
                 contentType(ContentType.Application.Json)
                 setBody(request)
@@ -30,7 +31,7 @@ class HeldOrderService(private val httpClient: HttpClient) {
         }.onFailure { logger.error(it) { "Failed to hold order" } }
 
     suspend fun updateHeldOrder(id: Long, request: HoldOrderRequest): Result<HeldOrderResponse> =
-        safeApiCall<HeldOrderResponse> {
+        safeApiCall<HeldOrderResponse>(eventBus) {
             httpClient.put("$HELD_ORDERS_ENDPOINT/$id") {
                 contentType(ContentType.Application.Json)
                 setBody(request)
@@ -38,7 +39,7 @@ class HeldOrderService(private val httpClient: HttpClient) {
         }.onFailure { logger.error(it) { "Failed to update held order with id $id" } }
 
     suspend fun deleteHeldOrder(id: Long): Result<Unit> =
-        safeApiCallForUnit {
+        safeApiCallForUnit(eventBus) {
             httpClient.delete("$HELD_ORDERS_ENDPOINT/$id")
         }.onFailure { logger.error(it) { "Failed to delete held order with id $id" } }
 }

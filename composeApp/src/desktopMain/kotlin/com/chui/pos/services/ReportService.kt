@@ -3,6 +3,7 @@ package com.chui.pos.services
 import com.chui.pos.dtos.PagedResponse
 import com.chui.pos.dtos.ReorderItemResponse
 import com.chui.pos.dtos.SaleSummaryResponse
+import com.chui.pos.events.AppEventBus
 import com.chui.pos.network.safeApiCall
 import io.ktor.client.*
 import io.ktor.client.request.*
@@ -10,7 +11,7 @@ import org.slf4j.LoggerFactory
 import java.time.LocalDate
 
 
-class ReportService(private val httpClient: HttpClient) {
+class ReportService(private val httpClient: HttpClient,  private val eventBus: AppEventBus) {
     companion object{
         private const val  REPORTS_ENDPOINT = "services/sales/recent"
         private const val  STOCK_LEVEL_ENDPOINT = "services/reorder-alerts"
@@ -24,7 +25,7 @@ class ReportService(private val httpClient: HttpClient) {
         page: Int = 0,
         size: Int = 15
     ): Result<PagedResponse<SaleSummaryResponse>> =
-        safeApiCall<PagedResponse<SaleSummaryResponse>> {
+        safeApiCall<PagedResponse<SaleSummaryResponse>>(eventBus) {
             httpClient.get(REPORTS_ENDPOINT) {
                 url {
                     parameters.append("page", page.toString())
@@ -37,7 +38,7 @@ class ReportService(private val httpClient: HttpClient) {
         }.onFailure { logger.error("Failed to fetch recent sales", it) }
 
 
-    suspend fun getReorderAlerts(): Result<List<ReorderItemResponse>> = safeApiCall<List<ReorderItemResponse>> {
+    suspend fun getReorderAlerts(): Result<List<ReorderItemResponse>> = safeApiCall<List<ReorderItemResponse>>(eventBus) {
         httpClient.get(STOCK_LEVEL_ENDPOINT)
     }.onFailure { logger.error("Failed to fetch stock level alerts", it) }
 }

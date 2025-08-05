@@ -14,6 +14,8 @@ import cafe.adriel.voyager.transitions.SlideTransition
 import com.chui.pos.components.AppDrawerContent
 import com.chui.pos.components.ServerStatusIndicator
 import com.chui.pos.di.appModule
+import com.chui.pos.events.AppEvent
+import com.chui.pos.events.AppEventBus
 import com.chui.pos.managers.AuthManager
 import com.chui.pos.screens.LoginScreen
 import com.chui.pos.viewmodels.ServerStatusViewModel
@@ -31,6 +33,7 @@ fun main() {
     application {
         var navigator: Navigator? by remember { mutableStateOf(null) }
         val authManager = koinInject<AuthManager>()
+        val eventBus = koinInject<AppEventBus>()
         val serverStatusViewModel = koinInject<ServerStatusViewModel>()
         val isLoggedIn by authManager.isLoggedInState.collectAsState()
         val windowState = rememberWindowState(placement = WindowPlacement.Maximized)
@@ -53,6 +56,21 @@ fun main() {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     Navigator(LoginScreen) { nav ->
                         SideEffect { navigator = nav }
+
+                        LaunchedEffect(Unit) {
+                            eventBus.events.collect { event ->
+                                when (event) {
+                                    is AppEvent.TokenExpired -> {
+                                        println("TokenExpired event received. Navigating to Login.")
+                                        // Clear any local session data (e.g., the stored token)
+                                        authManager.clearSession()
+                                        // Replace the entire navigation stack with the LoginScreen
+                                        nav.replaceAll(LoginScreen)
+                                    }
+                                }
+                            }
+                        }
+
                         if (isLoggedIn) {
                             ModalNavigationDrawer(
                                 drawerState = drawerState,
