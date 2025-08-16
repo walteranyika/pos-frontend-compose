@@ -354,6 +354,150 @@ fun PaymentDialog(viewModel: PosViewModel) {
     val paidAmount = payments.sumOf { it.amount }
     val remainingBalance = total - paidAmount
 
+    // State for the input fields
+    var amountInput by remember { mutableStateOf("") }
+    // 1. Default payment method is now MPESA
+    var selectedMethod by remember { mutableStateOf(PaymentMethod.MPESA) }
+    var isDropdownExpanded by remember { mutableStateOf(false) }
+
+    // 2. Effect to automatically fill the input with the remaining balance.
+    // This runs when the dialog opens and whenever a payment is added or removed.
+    LaunchedEffect(remainingBalance) {
+        if (remainingBalance > 0.009) { // Use a small epsilon for float comparison
+            amountInput = "%.2f".format(remainingBalance)
+        } else {
+            amountInput = "" // Clear the input if the sale is fully paid
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = { viewModel.onDismissPaymentDialog() },
+        title = { Text("Complete Payment") },
+        shape = RoundedCornerShape(3.dp),
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Total: %.2f".format(total), style = MaterialTheme.typography.titleLarge)
+                Text(
+                    "Remaining: %.2f".format(remainingBalance),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    thickness = DividerDefaults.Thickness,
+                    color = DividerDefaults.color
+                )
+
+                // Payment input
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = amountInput,
+                        onValueChange = { amountInput = it },
+                        label = { Text("Amount") },
+                        modifier = Modifier.weight(1f),
+                        enabled = remainingBalance > 0
+                    )
+                    Box {
+                        OutlinedButton(onClick = { isDropdownExpanded = true }) {
+                            Text(selectedMethod.name)
+                        }
+                        DropdownMenu(
+                            expanded = isDropdownExpanded,
+                            onDismissRequest = { isDropdownExpanded = false }
+                        ) {
+                            PaymentMethod.entries.forEach { method ->
+                                DropdownMenuItem(
+                                    text = { Text(method.name) },
+                                    onClick = {
+                                        selectedMethod = method
+                                        isDropdownExpanded = false
+                                        // UX Improvement: Auto-fill amount with remaining balance
+                                        if (remainingBalance > 0) {
+                                            amountInput = "%.2f".format(remainingBalance)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    Button(
+                        onClick = {
+                            val amount = amountInput.toDoubleOrNull()
+                            if (amount != null && amount > 0) {
+                                viewModel.addPayment(PaymentRequest(amount, selectedMethod))
+                                // 3. The LaunchedEffect now handles updating the input field,
+                                // so we don't need to clear it manually.
+                            }
+                        },
+                        // Disable button if input is invalid or nothing is owed
+                        enabled = remainingBalance > 0 && (amountInput.toDoubleOrNull() ?: 0.0) > 0
+                    ) { Text("Add") }
+                }
+
+                // List of added payments
+                LazyColumn {
+                    items(payments) { payment ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("${payment.method.name}: %.2f".format(payment.amount))
+                            IconButton(onClick = { viewModel.removePayment(payment) }) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "Remove Payment",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                        HorizontalDivider()
+                    }
+                }
+
+
+                // Print Receipt Checkbox
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.onPrintReceiptChanged(!viewModel.printReceipt) }
+                        .padding(vertical = 8.dp)
+                ) {
+                    Checkbox(
+                        checked = viewModel.printReceipt,
+                        onCheckedChange = { viewModel.onPrintReceiptChanged(it) }
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Print Receipt?")
+                }
+
+                Spacer(Modifier.height(16.dp))
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { viewModel.submitSale() },
+                // Enable only when the paid amount exactly matches the total
+                enabled = kotlin.math.abs(remainingBalance) < 0.01 && payments.isNotEmpty()
+            ) { Text("Submit Sale") }
+        },
+        dismissButton = {
+            Button(onClick = { viewModel.onDismissPaymentDialog() }) { Text("Cancel") }
+        }
+    )
+}
+/*
+@Composable
+fun PaymentDialog(viewModel: PosViewModel) {
+    val total by viewModel.cartTotal.collectAsState()
+    val payments by viewModel.payments.collectAsState()
+    val paidAmount = payments.sumOf { it.amount }
+    val remainingBalance = total - paidAmount
+
     var amountInput by remember { mutableStateOf("") }
     var selectedMethod by remember { mutableStateOf(PaymentMethod.CASH) }
     var isDropdownExpanded by remember { mutableStateOf(false) }
@@ -476,6 +620,7 @@ fun PaymentDialog(viewModel: PosViewModel) {
         }
     )
 }
+*/
 
 
 @OptIn(ExperimentalMaterial3Api::class)

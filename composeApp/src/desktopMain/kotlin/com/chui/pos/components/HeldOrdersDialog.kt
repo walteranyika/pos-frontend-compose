@@ -45,22 +45,23 @@ fun HeldOrdersDialog(
                 } else {
                     LazyColumn(modifier = Modifier.weight(1f)) {
                         items(heldOrders, key = { it.id }) { order ->
+                            // 1. Calculate the total for the order
+                            val total = order.items.sumOf { it.price * it.quantity }
+
                             ListItem(
                                 headlineContent = { Text(order.ref, fontWeight = FontWeight.Bold) },
                                 supportingContent = {
-                                    Text("Items: ${order.items.size} | Held on: ${order.createdAt ?: "N/A"}")
+                                    // 2. Display the calculated total
+                                    Text("Total: %.2f | Items: %d | Held on: %s".format(total, order.items.size, order.createdAt ?: "N/A"))
                                 },
                                 trailingContent = {
-                                    Row {
-                                        TooltipArea(tooltip = { Text("Resume Order") }) {
-                                            IconButton(onClick = { onResume(order) }) {
-                                                Icon(Icons.Default.PlayArrow, contentDescription = "Resume Order")
-                                            }
-                                        }
-                                        TooltipArea(tooltip = { Text("Delete Order") }) {
-                                            IconButton(onClick = { onDelete(order.id) }) {
-                                                Icon(Icons.Default.Delete, contentDescription = "Delete Order")
-                                            }
+                                    TooltipArea(tooltip = { Text("Delete Order") }) {
+                                        IconButton(onClick = { onDelete(order.id) }) {
+                                            Icon(
+                                                Icons.Default.Delete,
+                                                contentDescription = "Delete Order",
+                                                tint = MaterialTheme.colorScheme.error // Use error color for destructive actions
+                                            )
                                         }
                                     }
                                 },

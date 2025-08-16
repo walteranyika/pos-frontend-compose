@@ -569,7 +569,7 @@ class PosViewModel(
     }
 
     fun resumeHeldOrder(heldOrder: HeldOrderResponse){
-//        clearCart(clearHeldContext = false)
+        clearCart(clearHeldContext = false)
         val customer = _allCustomers.value.find { it.id == heldOrder.customerId }
         if (customer != null) {
             onCustomerSelected(customer)
