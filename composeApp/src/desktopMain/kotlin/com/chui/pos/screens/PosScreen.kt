@@ -270,7 +270,7 @@ fun AddCustomerDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add New Customer") },
-        shape = RoundedCornerShape(0.dp),
+        shape = RoundedCornerShape(3.dp),
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
@@ -361,6 +361,7 @@ fun PaymentDialog(viewModel: PosViewModel) {
     AlertDialog(
         onDismissRequest = { viewModel.onDismissPaymentDialog() },
         title = { Text("Complete Payment") },
+        shape = RoundedCornerShape(3.dp),
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Total: %.2f".format(total), style = MaterialTheme.typography.titleLarge)

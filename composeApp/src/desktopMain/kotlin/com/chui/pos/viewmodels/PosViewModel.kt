@@ -475,6 +475,8 @@ class PosViewModel(
         if (!item.isVariablePriced) {
             _cartItems.value = _cartItems.value + (productId to item.copy(quantity = item.quantity + 1.0))
         }
+        computeTotals()
+        soundService.playAddToCartSound()
     }
 
     fun decrementQuantity(productId: Int) {
@@ -488,6 +490,8 @@ class PosViewModel(
                 removeItem(productId)
             }
         }
+        computeTotals()
+        soundService.playAddToCartSound()
     }
 
     fun removeItem(productId: Int) {
@@ -497,6 +501,8 @@ class PosViewModel(
             recalculateTotal(mutableCart)
             mutableCart
         }
+        computeTotals()
+        soundService.playAddToCartSound()
     }
 
     fun holdCurrentOrder() {
@@ -608,6 +614,14 @@ class PosViewModel(
                     cartItem.copy(quantity = newQuantity) else mutableCart.remove(productId)
                 recalculateTotal(mutableCart)
             }
+            mutableCart
+        }
+    }
+
+    private fun computeTotals(){
+        _cartItems.update { currentCart ->
+            val mutableCart = currentCart.toMutableMap()
+            recalculateTotal(mutableCart)
             mutableCart
         }
     }
