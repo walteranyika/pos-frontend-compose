@@ -286,6 +286,43 @@ class PosViewModel(
 
     fun onProductClicked(product: ProductResponse) {
         if (product.isVariablePriced) {
+            // If variable, show the dialog and exit. Sound will be played when the item is confirmed.
+            variablePriceProduct = product
+            return
+        }
+
+        // --- Standard Product Logic ---
+        val currentCart = _cartItems.value
+        val existingItem = currentCart[product.id]
+
+        // Prevent adding a standard item if a variable-priced one with the same ID exists.
+        if (existingItem != null && existingItem.isVariablePriced) {
+            actionMessage = "Cannot add standard item; a variable-priced version is in the cart."
+            return
+        }
+
+        // Add new item or increment quantity of existing one.
+        val newItem = if (existingItem != null) {
+            existingItem.copy(quantity = existingItem.quantity + 1.0)
+        } else {
+            CartItem(
+                productId = product.id,
+                name = product.name,
+                price = product.price,
+                quantity = 1.0,
+                isVariablePriced = false
+            )
+        }
+
+        val updatedCart = currentCart + (product.id to newItem)
+        _cartItems.value = updatedCart
+        recalculateTotal(updatedCart)
+        soundService.playAddToCartSound() // Play sound only when a standard item is successfully added/updated.
+    }
+
+/*
+    fun onProductClicked(product: ProductResponse) {
+        if (product.isVariablePriced) {
             // If variable, show the dialog
             variablePriceProduct = product
         } else {
@@ -314,6 +351,7 @@ class PosViewModel(
         soundService.playAddToCartSound()
 
     }
+*/
 
     /*    fun onProductClicked(product: ProductResponse) {
             _cartItems.update { currentCart ->

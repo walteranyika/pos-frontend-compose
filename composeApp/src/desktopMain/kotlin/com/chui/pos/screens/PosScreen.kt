@@ -1,5 +1,6 @@
 package com.chui.pos.screens
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 import cafe.adriel.voyager.core.screen.Screen
 import com.chui.pos.components.HeldOrdersDialog
 import com.chui.pos.dtos.CartItem
@@ -128,8 +130,8 @@ object PosScreen : Screen {
 private fun CartView(viewModel: PosViewModel) {
     val cartItems by viewModel.cartItems.collectAsState()
     val total by viewModel.cartTotal.collectAsState()
-    val activeHeldOrderId by remember { mutableStateOf(viewModel.activeHeldOrderId) }
-    //val activeHeldOrderId by viewModel.activeHeldOrderId.collectAsState() // Correctly observes the StateFlow
+   // val activeHeldOrderId by remember { mutableStateOf(viewModel.activeHeldOrderId) }
+    val activeHeldOrderId = viewModel.activeHeldOrderId
 
     Surface(tonalElevation = 2.dp, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -490,138 +492,6 @@ fun PaymentDialog(viewModel: PosViewModel) {
         }
     )
 }
-/*
-@Composable
-fun PaymentDialog(viewModel: PosViewModel) {
-    val total by viewModel.cartTotal.collectAsState()
-    val payments by viewModel.payments.collectAsState()
-    val paidAmount = payments.sumOf { it.amount }
-    val remainingBalance = total - paidAmount
-
-    var amountInput by remember { mutableStateOf("") }
-    var selectedMethod by remember { mutableStateOf(PaymentMethod.CASH) }
-    var isDropdownExpanded by remember { mutableStateOf(false) }
-
-    AlertDialog(
-        onDismissRequest = { viewModel.onDismissPaymentDialog() },
-        title = { Text("Complete Payment") },
-        shape = RoundedCornerShape(3.dp),
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Total: %.2f".format(total), style = MaterialTheme.typography.titleLarge)
-                Text(
-                    "Remaining: %.2f".format(remainingBalance),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    thickness = DividerDefaults.Thickness,
-                    color = DividerDefaults.color
-                )
-
-                // Payment input
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = amountInput,
-                        onValueChange = { amountInput = it },
-                        label = { Text("Amount") },
-                        modifier = Modifier.weight(1f),
-                        enabled = remainingBalance > 0
-                    )
-                    Box {
-                        OutlinedButton(onClick = { isDropdownExpanded = true }) {
-                            Text(selectedMethod.name)
-                        }
-                        DropdownMenu(
-                            expanded = isDropdownExpanded,
-                            onDismissRequest = { isDropdownExpanded = false }
-                        ) {
-                            PaymentMethod.entries.forEach { method ->
-                                DropdownMenuItem(
-                                    text = { Text(method.name) },
-                                    onClick = {
-                                        selectedMethod = method
-                                        isDropdownExpanded = false
-                                        // UX Improvement: Auto-fill amount with remaining balance
-                                        if (remainingBalance > 0) {
-                                            amountInput = "%.2f".format(remainingBalance)
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                    }
-                    Button(
-                        onClick = {
-                            val amount = amountInput.toDoubleOrNull()
-                            if (amount != null && amount > 0) {
-                                viewModel.addPayment(PaymentRequest(amount, selectedMethod))
-                                amountInput = ""
-                            }
-                        },
-                        enabled = remainingBalance > 0
-                    ) { Text("Add") }
-                }
-
-                // List of added payments
-                LazyColumn {
-                    items(payments) { payment ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("${payment.method.name}: %.2f".format(payment.amount))
-                            IconButton(onClick = { viewModel.removePayment(payment) }) {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = "Remove Payment",
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-                        HorizontalDivider()
-                    }
-                }
-
-
-                // Print Receipt Checkbox
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { viewModel.onPrintReceiptChanged(!viewModel.printReceipt) }
-                        .padding(vertical = 8.dp)
-                ) {
-                    Checkbox(
-                        checked = viewModel.printReceipt,
-                        onCheckedChange = { viewModel.onPrintReceiptChanged(it) }
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text("Print Receipt?")
-                }
-
-                Spacer(Modifier.height(16.dp))
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = { viewModel.submitSale() },
-                // Enable only when the paid amount exactly matches the total
-                enabled = kotlin.math.abs(remainingBalance) < 0.01 && payments.isNotEmpty()
-            ) { Text("Submit Sale") }
-        },
-        dismissButton = {
-            Button(onClick = { viewModel.onDismissPaymentDialog() }) { Text("Cancel") }
-        }
-    )
-}
-*/
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -718,31 +588,78 @@ private fun ProductListView(viewModel: PosViewModel) {
     }
 }
 
+// ...
+
 @Composable
 private fun CategoryFilterRow(
     categories: List<CategoryResponse>,
     selectedCategoryId: Int?,
     onCategorySelected: (Int?) -> Unit
 ) {
+    // A list of vibrant, Material-style colors for the buttons
+    val vibrantColors = remember {
+        listOf(
+            Color(0xFFEF5350), // Red 400
+            Color(0xFF66BB6A), // Green 400
+            Color(0xFF42A5F5), // Blue 400
+            Color(0xFFFFCA28), // Amber 400
+            Color(0xFFAB47BC), // Purple 400
+            Color(0xFFFF7043), // Deep Orange 400
+            Color(0xFF26A69A), // Teal 400
+            Color(0xFF78909C)  // Blue Grey 400
+        )
+    }
+
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp) // Increased spacing
     ) {
-        // "All" button
+        // "All" button - styled with theme colors to stand out
         item {
-            FilterChip(
-                selected = selectedCategoryId == null,
+            val isSelected = selectedCategoryId == null
+            Button(
                 onClick = { onCategorySelected(null) },
-                label = { Text("All") }
-            )
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier
+                    .height(48.dp)
+                    .border(
+                        width = if (isSelected) 3.dp else 0.dp,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                        shape = RoundedCornerShape(8.dp)
+                    ),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            ) {
+                Text("All", fontWeight = FontWeight.Bold)
+            }
         }
+
         // Category buttons
-        items(categories, key = { it.id }) { category ->
-            FilterChip(
-                selected = selectedCategoryId == category.id,
+        items(categories.indices.toList()) { index ->
+            val category = categories[index]
+            val isSelected = selectedCategoryId == category.id
+            // Cycle through the vibrant colors
+            val color = vibrantColors[index % vibrantColors.size]
+
+            Button(
                 onClick = { onCategorySelected(category.id) },
-                label = { Text(category.name) }
-            )
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier
+                    .height(48.dp) // Larger height
+                    .border(
+                        width = if (isSelected) 3.dp else 0.dp,
+                        color = if (isSelected) Color.White else Color.Transparent,
+                        shape = RoundedCornerShape(8.dp)
+                    ),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = color,
+                    contentColor = Color.White
+                )
+            ) {
+                Text(category.name, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
