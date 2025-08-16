@@ -1,6 +1,7 @@
 package com.chui.pos.dtos
 
 import kotlinx.serialization.Serializable
+import java.math.BigDecimal
 
 // This enum should match what your backend expects
 @Serializable
@@ -20,6 +21,7 @@ data class ProductResponse(
     val saleUnit: ProductUnitResponse,
     val purchaseUnit: ProductUnitResponse,
     val stockAlert: Double,
+    val popularity: Double,
     val category: CategoryResponse,
     val taxMethod: TaxType,
     val image: String?,
