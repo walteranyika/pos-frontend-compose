@@ -20,6 +20,7 @@ data class HeldOrderResponse(
     val ref: String,
     val items: List<HeldOrderItemResponse>,
     val customerId: Long,
+    val customerName: String,
     // Using String for simplicity, can be parsed with a custom serializer if needed
     val createdAt: String? = null
 )

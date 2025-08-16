@@ -49,9 +49,11 @@ fun HeldOrdersDialog(
                             val total = order.items.sumOf { it.price * it.quantity }
 
                             ListItem(
+                                // 2. Add the customer name to the overline
+                                overlineContent = { Text(order.customerName) },
                                 headlineContent = { Text(order.ref, fontWeight = FontWeight.Bold) },
                                 supportingContent = {
-                                    // 2. Display the calculated total
+                                    // 3. Display the calculated total and other info
                                     Text("Total: %.2f | Items: %d | Held on: %s".format(total, order.items.size, order.createdAt ?: "N/A"))
                                 },
                                 trailingContent = {
