@@ -29,7 +29,9 @@ data class ProductFormData(
     val taxMethod: TaxType = TaxType.INCLUSIVE,
     val isVariablePriced: Boolean = false,
     val isActive: Boolean = true,
-    val note: String? = null
+    val note: String? = null,
+    val imageUrl: String? = null,
+    val selectedImageFile: File? = null
 )
 
 // Add this new state data class
@@ -108,7 +110,8 @@ class ProductViewModel(
             taxMethod = product.taxMethod,
             isVariablePriced = product.isVariablePriced,
             isActive = product.isActive,
-            note = product.note
+            note = product.note,
+            imageUrl = product.image
         )
     }
 
@@ -137,8 +140,8 @@ class ProductViewModel(
 
         screenModelScope.launch {
             val result = selectedProductId?.let {
-                productService.updateProduct(it, request)
-            } ?: productService.createProduct(request)
+                productService.updateProduct(it, request, formState.selectedImageFile)
+            } ?: productService.createProduct(request, formState.selectedImageFile)
 
             result.onSuccess {
                 clearSelection()
@@ -167,6 +170,15 @@ class ProductViewModel(
                 }.onFailure { println("Error deleting product: ${it.message}") }
             showDeleteConfirmDialog = false
         }
+    }
+
+    fun onImageFileSelected(file: File?) {
+        // When a file is selected (or removed by passing null), update the state.
+        // If a new file is selected, clear any existing imageUrl to prioritize the new selection.
+        formState = formState.copy(
+            selectedImageFile = file,
+            imageUrl = if (file != null) null else formState.imageUrl
+        )
     }
 
     // --- Search ---

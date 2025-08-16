@@ -1,6 +1,8 @@
 package com.chui.pos.screens
 
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,6 +18,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
@@ -24,6 +31,10 @@ import com.chui.pos.dtos.*
 import com.chui.pos.viewmodels.ProductViewModel
 import com.chui.pos.viewmodels.ProductsOnlyUiState
 import org.koin.compose.koinInject
+import org.jetbrains.skia.Image
+import java.io.File
+import javax.swing.JFileChooser
+import javax.swing.filechooser.FileNameExtensionFilter
 
 @OptIn(ExperimentalMaterial3Api::class)
 object ProductsScreen : Screen {
@@ -120,7 +131,15 @@ private fun ProductForm(viewModel: ProductViewModel, uiState: ProductsOnlyUiStat
         item { OutlinedTextField(value = formState.stockAlert, onValueChange = { onFormChange(formState.copy(stockAlert = it)) }, label = { Text("Stock Alert Quantity") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)) }
         item { OutlinedTextField(value = formState.note ?: "", onValueChange = { onFormChange(formState.copy(note = it)) }, label = { Text("Note (Optional)") }, modifier = Modifier.fillMaxWidth()) }
 
-
+        // --- NEW: Image Picker ---
+        item {
+            ImagePicker(
+                label = "Product Image (Optional)",
+                imageUrl = formState.imageUrl,
+                selectedFile = formState.selectedImageFile,
+                onFileSelected = viewModel::onImageFileSelected
+            )
+        }
         item { FormSwitch(label = "Is Active", checked = formState.isActive, onCheckedChange = { onFormChange(formState.copy(isActive = it)) }) }
         item { FormSwitch(label = "Variable Price (at POS)", checked = formState.isVariablePriced, onCheckedChange = { onFormChange(formState.copy(isVariablePriced = it)) }) }
 
@@ -140,6 +159,74 @@ private fun ProductForm(viewModel: ProductViewModel, uiState: ProductsOnlyUiStat
         }
     }
 }
+
+
+@Composable
+private fun ImagePicker(
+    label: String,
+    imageUrl: String?,
+    selectedFile: File?,
+    onFileSelected: (File?) -> Unit
+) {
+    val fileChooser = remember {
+        JFileChooser().apply {
+            fileFilter = FileNameExtensionFilter("Images (png, jpg, jpeg)", "png", "jpg", "jpeg")
+            isAcceptAllFileFilterUsed = false
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(label, style = MaterialTheme.typography.bodyLarge)
+
+        // Image Preview
+        val imageModifier = Modifier
+            .fillMaxWidth()
+            .height(150.dp)
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
+            .clip(RoundedCornerShape(4.dp))
+
+        Box(modifier = imageModifier, contentAlignment = Alignment.Center) {
+            when {
+                selectedFile != null -> {
+                    val bitmap = remember(selectedFile) {
+                        Image.makeFromEncoded(selectedFile.readBytes()).toComposeImageBitmap()                    }
+                    Image(
+                        painter = BitmapPainter(bitmap),
+                        contentDescription = "Selected product image",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                !imageUrl.isNullOrBlank() -> {
+                    // In a real app with network image loading, you would use a library like Coil or Kamel here.
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Current Image:\n${imageUrl.substringAfterLast('/')}", textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    }
+                }
+                else -> {
+                    Text("No Image Selected", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+
+        // Action Buttons
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = {
+                if (fileChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+                    onFileSelected(fileChooser.selectedFile)
+                }
+            }, shape = RoundedCornerShape(0.dp)) {
+                Text("Select Image")
+            }
+            if (selectedFile != null || !imageUrl.isNullOrBlank()) {
+                OutlinedButton(onClick = { onFileSelected(null) }, shape = RoundedCornerShape(0.dp)) {
+                    Text("Remove Image")
+                }
+            }
+        }
+    }
+}
+
 
 @Composable
 private fun FormSwitch(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
