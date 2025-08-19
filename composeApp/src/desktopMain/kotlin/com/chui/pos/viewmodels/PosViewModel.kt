@@ -91,6 +91,7 @@ class PosViewModel(
     var showAddCustomerDialog by mutableStateOf(false)
         private set
 
+    private var allProductsMasterList: List<ProductResponse> = emptyList()
 
     var saleSubmissionState by mutableStateOf<SaleSubmissionState>(SaleSubmissionState.Idle)
         private set
@@ -218,7 +219,11 @@ class PosViewModel(
                     emptyList()
                 }
 
-                productsState = ProductsUiState.Success(products, categories)
+                allProductsMasterList = products
+
+                val sortedProducts = products.sortedByDescending { it.popularity }
+
+                productsState = ProductsUiState.Success(sortedProducts, categories)
                 selectDefaultCustomer() // Select "Walk-in Customer" on startup
             }
         }
@@ -264,7 +269,30 @@ class PosViewModel(
         }
     }
 
+
     fun onCategorySelected(categoryId: Int?) {
+        val currentState = productsState
+        if (currentState !is ProductsUiState.Success) return
+
+        selectedCategoryId = categoryId
+
+        // 1. Determine the list to be filtered (no new network call)
+        val filteredList = if (categoryId == null) {
+            // If "All" is selected, use the complete master list
+            allProductsMasterList
+        } else {
+            // Otherwise, filter the master list by the selected category
+            allProductsMasterList.filter { it.category.id == categoryId }
+        }
+
+        // 2. Sort the resulting list by popularity
+        val sortedProducts = filteredList.sortedByDescending { it.popularity }
+
+        // 3. Update the UI state with the sorted and filtered products
+        productsState = currentState.copy(products = sortedProducts)
+    }
+
+    /*fun onCategorySelected(categoryId: Int?) {
         val currentState = productsState
         if (currentState !is ProductsUiState.Success) return
 
@@ -282,7 +310,7 @@ class PosViewModel(
                 println("Error filtering products: ${error.message}")
             }
         }
-    }
+    }*/
 
     fun onProductClicked(product: ProductResponse) {
         if (product.isVariablePriced) {

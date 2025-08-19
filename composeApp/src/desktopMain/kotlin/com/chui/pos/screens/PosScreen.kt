@@ -520,8 +520,7 @@ private fun ProductListView(viewModel: PosViewModel) {
 
             ExposedDropdownMenu(
                 expanded = isDropdownVisible,
-                onDismissRequest = { /* We don't want this */ }
-            ) {
+                onDismissRequest = { viewModel.onSearchQueryChange("") }            ) {
                 searchResults.forEach { product ->
                     val varyingPrice = if (product.isVariablePriced){
                         "(V)"
