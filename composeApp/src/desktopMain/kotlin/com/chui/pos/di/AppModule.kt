@@ -56,7 +56,6 @@ val appModule = module {
         single { SaleService(get(), get()) }
         single { UnitService(get(), get()) }
         single { CategoryService(get(), get()) }
-        single { ProductService(get(), get()) }
         single { ReportService(get(), get()) }
         single { PrintingService(get()) }
         single { StockService(get(), get()) }

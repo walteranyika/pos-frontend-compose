@@ -614,6 +614,23 @@ class PosViewModel(
 
     }
 
+    /**
+     * Fetches the latest list of held orders from the service and updates the local state.
+     * This is useful after completing a sale that was previously on hold.
+     */
+    fun refreshHeldOrders() {
+        screenModelScope.launch {
+            heldOrderService.getHeldOrders()
+                .onSuccess { updatedOrders ->
+                    helOrders = updatedOrders
+                }
+                .onFailure { error ->
+                    // Optionally show an action message if the refresh fails
+                    actionMessage = "Could not refresh held orders: ${error.message}"
+                }
+        }
+    }
+
     fun showHeldOrdersDialog(){
         showHeldOrdersDialog = true
         loadHeldOrders()

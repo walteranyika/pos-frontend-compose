@@ -56,6 +56,7 @@ object PosScreen : Screen {
                 is SaleSubmissionState.Success -> {
                     println("Sale submitted successfully!")
                     snackbarHostState.showSnackbar("Sale submitted successfully")
+                    viewModel.refreshHeldOrders()
                     viewModel.resetSaleSubmissionState()
                 }
 
