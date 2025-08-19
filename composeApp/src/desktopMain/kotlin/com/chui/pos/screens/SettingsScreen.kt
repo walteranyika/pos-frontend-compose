@@ -1,5 +1,6 @@
 package com.chui.pos.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -11,6 +12,7 @@ import com.chui.pos.viewmodels.SettingsViewModel
 import org.koin.compose.koinInject
 
 object SettingsScreen : Screen {
+
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
@@ -79,6 +81,30 @@ object SettingsScreen : Screen {
                                 }
                             }
                         }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.onSoundToggled(!viewModel.soundEnabled) } // Make the whole row clickable
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                                Text("Sound Effects", style = MaterialTheme.typography.bodyLarge)
+                                Text(
+                                    "Play sound when adding/removing items",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = viewModel.soundEnabled,
+                                onCheckedChange = viewModel::onSoundToggled
+                            )
+                        }
+
+
 
                         Button(
                             onClick = { viewModel.saveSettings() },

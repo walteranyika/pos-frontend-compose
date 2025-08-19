@@ -29,7 +29,7 @@ class ServerStatusViewModel(private val healthService: HealthService) : ScreenMo
             flow {
                 while (true) {
                     emit(Unit)
-                    delay(30_000L) // Check every 15 seconds
+                    delay(30_000L) // Check every 30 seconds
                 }
             }.collect {
                 val healthCheckResult = healthService.checkHealth()

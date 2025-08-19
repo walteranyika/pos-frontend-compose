@@ -24,6 +24,7 @@ import com.chui.pos.services.HeldOrderService
 import com.chui.pos.services.PrintingService
 import com.chui.pos.services.ProductService
 import com.chui.pos.services.SaleService
+import com.chui.pos.services.SettingsService
 import com.chui.pos.services.SoundService
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -65,6 +66,7 @@ class PosViewModel(
     private val heldOrderService: HeldOrderService,
     private val soundService: SoundService,
     private val customerService: CustomerService,
+    private val settingsService: SettingsService,
 ) : ScreenModel {
 
     private val _uiState = mutableStateOf<PosUiState>(PosUiState.Loading)
@@ -247,6 +249,12 @@ class PosViewModel(
         }
     }
 
+    private fun playSoundIfEnabled() {
+        if (settingsService.loadSoundEnabled()) {
+            soundService.playAddToCartSound()
+        }
+    }
+
 
     private fun fetchProductsAndCategories() {
         productsState = ProductsUiState.Loading
@@ -345,7 +353,7 @@ class PosViewModel(
         val updatedCart = currentCart + (product.id to newItem)
         _cartItems.value = updatedCart
         recalculateTotal(updatedCart)
-        soundService.playAddToCartSound() // Play sound only when a standard item is successfully added/updated.
+        playSoundIfEnabled()
     }
 
 /*
@@ -542,7 +550,7 @@ class PosViewModel(
             _cartItems.value = _cartItems.value + (productId to item.copy(quantity = item.quantity + 1.0))
         }
         computeTotals()
-        soundService.playAddToCartSound()
+        playSoundIfEnabled()
     }
 
     fun decrementQuantity(productId: Int) {
@@ -557,7 +565,7 @@ class PosViewModel(
             }
         }
         computeTotals()
-        soundService.playAddToCartSound()
+        playSoundIfEnabled()
     }
 
     fun removeItem(productId: Int) {
@@ -567,8 +575,7 @@ class PosViewModel(
             recalculateTotal(mutableCart)
             mutableCart
         }
-        computeTotals()
-        soundService.playAddToCartSound()
+        playSoundIfEnabled()
     }
 
     fun holdCurrentOrder() {

@@ -4,14 +4,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import cafe.adriel.voyager.core.model.ScreenModel
-import cafe.adriel.voyager.core.model.screenModelScope
-import com.chui.pos.managers.AppSettings
-import com.chui.pos.managers.SettingsManager
 import com.chui.pos.services.PrintingService
+import com.chui.pos.services.SettingsService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 
 data class SettingsUiState(
     val availablePrinters: List<String> = emptyList(),
@@ -19,7 +16,7 @@ data class SettingsUiState(
 )
 
 class SettingsViewModel(
-    private val settingsManager: SettingsManager,
+    private val settingsService: SettingsService,
     private val printingService: PrintingService
 ) : ScreenModel {
 
@@ -28,21 +25,22 @@ class SettingsViewModel(
 
     var baseUrl by mutableStateOf("")
         private set
-
     var selectedPrinter by mutableStateOf("")
+        private set
+    var soundEnabled by mutableStateOf(true) // State for the sound toggle
         private set
 
     init {
-        loadInitialState()
+        loadSettings()
     }
 
-    private fun loadInitialState() {
-        screenModelScope.launch {
-            val printers = printingService.getAvailablePrinters()
-            val currentSettings = settingsManager.settings.value
-            _uiState.update { it.copy(availablePrinters = printers) }
-            baseUrl = currentSettings.baseUrl
-            selectedPrinter = currentSettings.printerName
+    private fun loadSettings() {
+        baseUrl = settingsService.loadBaseUrl()
+        selectedPrinter = settingsService.loadPrinterName()
+        soundEnabled = settingsService.loadSoundEnabled() // Load the setting
+
+        _uiState.update {
+            it.copy(availablePrinters = printingService.getAvailablePrinters())
         }
     }
 
@@ -54,14 +52,19 @@ class SettingsViewModel(
         selectedPrinter = printerName
     }
 
+    // Handler for the new toggle
+    fun onSoundToggled(isEnabled: Boolean) {
+        soundEnabled = isEnabled
+    }
+
     fun saveSettings() {
-        val newSettings = AppSettings(
-            baseUrl = baseUrl.trim(),
-            printerName = selectedPrinter
-        )
-        settingsManager.saveSettings(newSettings)
+        settingsService.saveBaseUrl(baseUrl)
+        settingsService.savePrinterName(selectedPrinter)
+        settingsService.saveSoundEnabled(soundEnabled) // Save the new setting
         _uiState.update { it.copy(toastMessage = "Settings saved successfully!") }
     }
+
+
 
     fun onToastMessageShown() {
         _uiState.update { it.copy(toastMessage = null) }

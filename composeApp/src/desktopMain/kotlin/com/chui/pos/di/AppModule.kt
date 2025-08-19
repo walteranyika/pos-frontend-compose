@@ -2,40 +2,15 @@ package com.chui.pos.di
 
 import com.chui.pos.events.AppEventBus
 import com.chui.pos.managers.AuthManager
-import com.chui.pos.managers.SettingsManager
-import com.chui.pos.services.CategoryService
-import com.chui.pos.services.CustomerService
-import com.chui.pos.services.HealthService
-import com.chui.pos.services.HeldOrderService
-import com.chui.pos.services.LoginService
-import com.chui.pos.services.PrintingService
-import com.chui.pos.services.ProductService
-import com.chui.pos.services.PurchaseService
-import com.chui.pos.services.ReportService
-import com.chui.pos.services.SaleService
-import com.chui.pos.services.SoundService
-import com.chui.pos.services.StockService
-import com.chui.pos.services.UnitService
-import com.chui.pos.services.UserService
-import com.chui.pos.viewmodels.CategoryViewModel
-import com.chui.pos.viewmodels.LoginViewModel
-import com.chui.pos.viewmodels.PosViewModel
-import com.chui.pos.viewmodels.ProductViewModel
-import com.chui.pos.viewmodels.PurchaseViewModel
-import com.chui.pos.viewmodels.ReorderViewModel
-import com.chui.pos.viewmodels.ReportsViewModel
-import com.chui.pos.viewmodels.ServerStatusViewModel
-import com.chui.pos.viewmodels.SettingsViewModel
-import com.chui.pos.viewmodels.StockViewModel
-import com.chui.pos.viewmodels.UnitViewModel
-import com.chui.pos.viewmodels.UserViewModel
+import com.chui.pos.services.*
+import com.chui.pos.viewmodels.*
 import com.russhwolf.settings.Settings
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.defaultRequest
-import io.ktor.client.request.header
-import io.ktor.serialization.kotlinx.json.json
+import io.ktor.client.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.request.*
+import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 import org.koin.dsl.module
 
@@ -44,7 +19,7 @@ val appModule = module {
         // Provide the HttpClient as a singleton, which depends on AuthManager
         single {
             val authManager: AuthManager = get()
-            val settingsManager: SettingsManager = get()
+            val settingsManager: SettingsService = get()
             HttpClient(CIO) {
                 // Configure JSON serialization
                 install(ContentNegotiation) {
@@ -58,7 +33,7 @@ val appModule = module {
                 // This block is applied to every outgoing request
                 defaultRequest {
                     // Set the base URL from our central config
-                    url(settingsManager.settings.value.baseUrl)
+                    url(settingsManager.loadBaseUrl())
 
                     // If a token exists, add the Authorization header
                     authManager.getToken()?.let { token ->
@@ -70,7 +45,6 @@ val appModule = module {
 
         // Persistence Layer
         single { Settings() }
-        single { SettingsManager() }
 
         single { AuthManager(get()) }
 
@@ -93,13 +67,13 @@ val appModule = module {
         single { SoundService() }
         single { UserService(get(), get()) }
         single { CustomerService(get(), get()) }
-
+        single { SettingsService() }
 
 
 
         // ViewModels
         factory { LoginViewModel(get(), get()) }
-        factory { PosViewModel(get(), get(), get(), get(), get(), get(), get()) }
+        factory { PosViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
         factory { UnitViewModel(get() ) }
         factory { ReportsViewModel(get() ) }
         factory { CategoryViewModel(get() ) }

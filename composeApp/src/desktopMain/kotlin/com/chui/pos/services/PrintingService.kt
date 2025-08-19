@@ -1,12 +1,11 @@
 package com.chui.pos.services
 
 import com.chui.pos.dtos.SaleSummaryResponse
-import com.chui.pos.managers.SettingsManager
 import org.slf4j.LoggerFactory
 import javax.print.*
 
 
-class PrintingService(private val settingsManager: SettingsManager) {
+class PrintingService(private val settingsService: SettingsService) {
     companion object{
         private const val PRINTER_NAME = "POS-80" // A common name for 80mm thermal printers
         private val logger = LoggerFactory.getLogger(PrintingService::class.java)
@@ -35,7 +34,7 @@ class PrintingService(private val settingsManager: SettingsManager) {
 
 
     fun printReceipt(sale: SaleSummaryResponse) {
-        val printerName = settingsManager.settings.value.printerName
+        val printerName = settingsService.loadPrinterName()
         val printer = findPrinter(printerName)
         if (printer == null) {
             return
